@@ -20,6 +20,9 @@ export TC002_MQTT_USERNAME="${MQTT_USERNAME}"
 export TC002_MQTT_PASSWORD="${MQTT_PASSWORD}"
 export TC002_ADAPTER_TOKEN="$(bashio::config 'adapter_token')"
 
+python3 -m tc002_awtrix_bridge.migrate_data \
+  --source /config/tc002-migration --target /data
+
 python3 -m tc002_awtrix_bridge.addon_config \
   --options /data/options.json \
   --output /data/bridge-config.yaml

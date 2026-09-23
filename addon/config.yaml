@@ -1,5 +1,5 @@
 name: TC002 AWTRIX Bridge
-version: 0.2.25
+version: 0.2.26
 slug: tc002_awtrix_bridge
 description: AWTRIX NG MQTT/HTTP compatibility bridge for Ulanzi TC002 Pixbar
 url: https://github.com/lucaamo/tc002-awtrix-ha-addon
@@ -12,6 +12,9 @@ init: false
 startup: services
 boot: auto
 host_network: true
+map:
+  - type: addon_config
+    read_only: true
 services:
   - mqtt:need
 ingress: true

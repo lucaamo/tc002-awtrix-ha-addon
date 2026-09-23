@@ -19,6 +19,9 @@ Do not uninstall or disable it until its options and `/data` content have been
 copied to the repository-installed app and the new app has passed a live check.
 The two apps cannot run together on the same TCP/UDP ports and MQTT identity.
 
-Release 0.2.25 is based on development commit `7f43e65cfd6bb9cdc8b4678d20defc41e87ba8bb`.
-The distribution defaults use generic values; an existing installation's
-options must be migrated separately.
+Release 0.2.26 adds a one-time importer for existing local installations.
+Its snapshot must be staged in the repository app's private `addon_config`
+directory with a SHA-256 manifest before first start. It imports only the
+known bridge state files and icons, never Supervisor options. Keep a backup
+and the local app installed until the new app is verified. The distribution
+defaults use generic values; existing options must be migrated separately.

@@ -1,8 +1,8 @@
 # TC002 AWTRIX Bridge add-on
 
 Self-contained Home Assistant add-on build context. Configure the TC002 address,
-MQTT broker/prefix and matching adapter token in the add-on options. The
-[repository guide](../README.md) explains installation and update behavior.
+MQTT broker/prefix and matching adapter token in the add-on options. The full
+behavior, security and installation guide is in the repository `docs` folder.
 
 Open **Web UI** from the add-on page for the live 52x16 preview, carousel
 controls and App Studio. App Studio creates persistent static, sensor,
@@ -22,6 +22,16 @@ playlist URI, volume step and long-press threshold. With the native companion,
 the knob and rocker become play/pause, next/previous and Sonos volume controls
 while a dedicated now-playing screen pauses the normal carousel.
 
+## 0.2.26
+
+Adds a one-time, checksum-verified import path for migration from the local
+add-on. The new repository add-on reads a prepared snapshot from its own
+read-only `/config/tc002-migration` directory, imports only the known state
+files and icons into a fresh `/data`, and refuses to overwrite existing state.
+The snapshot and manifest are never distributed with the add-on. Supervisor
+options, including the adapter token and MQTT settings, must be transferred
+separately. Remove the staged snapshot after a successful migration.
+
 ## 0.2.25
 
 Adds a device settings overview with live adapter/MQTT status and direct access
@@ -31,4 +41,5 @@ network configuration changes are made.
 
 ## 0.2.24
 
-Adds the project link on the Home Assistant add-on information card.
+Connects the project link on the Home Assistant add-on information card to the
+public GitHub repository.
