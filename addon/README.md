@@ -22,6 +22,10 @@ playlist URI, volume step and long-press threshold. With the native companion,
 the knob and rocker become play/pause, next/previous and Sonos volume controls
 while a dedicated now-playing screen pauses the normal carousel.
 
+## 0.2.28
+
+Reports the installed package version in health, device info and discovery.
+
 ## 0.2.27
 
 Adds a one-time, checksum-verified import path for migration from the local
