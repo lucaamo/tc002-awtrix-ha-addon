@@ -15,7 +15,7 @@ from aiohttp import web
 from . import __version__
 from .config import HttpConfig
 from .engine import Engine
-from .errors import BridgeError, invalid_json, not_found, unsupported
+from .errors import BridgeError, invalid_json, not_found, unsupported, validation
 from .lametric import (
     MODE_FAITHFUL_2X,
     SUPPORTED_MODES,
@@ -176,6 +176,10 @@ class HttpService:
         router.add_post("/api/v1/files", self.upload_file)
         router.add_delete("/api/v1/files", self.delete_file)
         router.add_get("/api/v1/studio/apps", self.studio_apps)
+        router.add_get("/api/v1/studio/entities", self.studio_entities)
+        router.add_get("/api/v1/studio/apps/{name}/preview", self.studio_live_preview)
+        router.add_post("/api/v1/studio/apps/{name}/rename", self.studio_rename)
+        router.add_post("/api/v1/studio/import", self.studio_import)
         router.add_post("/api/v1/studio/apps", self.studio_create)
         router.add_put("/api/v1/studio/apps/{name}", self.studio_update)
         router.add_delete("/api/v1/studio/apps/{name}", self.studio_delete)
@@ -582,6 +586,43 @@ class HttpService:
 
     async def studio_apps(self, request: web.Request) -> web.Response:
         return web.json_response(self._authenticated_studio(request).document())
+
+    async def studio_entities(self, request: web.Request) -> web.Response:
+        studio = self._authenticated_studio(request)
+        domain = request.query.get("domain", "")
+        if domain not in {"sensor", "binary_sensor", "input_number", "weather", "calendar", "todo"}:
+            raise validation("Unsupported entity domain", "domain")
+        entries = await studio.list_entities(domain)
+        entities = []
+        for item in entries:
+            entity_id = item.get("entity_id")
+            if not isinstance(entity_id, str):
+                continue
+            attributes = item.get("attributes")
+            if not isinstance(attributes, dict):
+                attributes = {}
+            entities.append({
+                "entityId": entity_id,
+                "name": str(attributes.get("friendly_name") or entity_id)[:100],
+                "state": str(item.get("state") or "")[:64],
+                "unit": str(attributes.get("unit_of_measurement") or "")[:24],
+            })
+        return web.json_response({"entities": entities})
+
+    async def studio_live_preview(self, request: web.Request) -> web.Response:
+        studio = self._authenticated_studio(request)
+        return web.json_response(await studio.preview_live(request.match_info["name"]))
+
+    async def studio_import(self, request: web.Request) -> web.Response:
+        studio = self._authenticated_studio(request)
+        return web.json_response(await studio.import_definitions(await self._json(request)))
+
+    async def studio_rename(self, request: web.Request) -> web.Response:
+        studio = self._authenticated_studio(request)
+        body = await self._json(request)
+        if not isinstance(body, dict) or not isinstance(body.get("name"), str):
+            raise validation("New app name is required", "name")
+        return web.json_response(await studio.rename(request.match_info["name"], body["name"]))
 
     async def studio_create(self, request: web.Request) -> web.Response:
         studio = self._authenticated_studio(request)

@@ -22,6 +22,15 @@ playlist URI, volume step and long-press threshold. With the native companion,
 the knob and rocker become play/pause, next/previous and Sonos volume controls
 while a dedicated now-playing screen pauses the normal carousel.
 
+## 0.2.31
+
+App Studio now starts with source cards and presets, groups advanced controls,
+and offers both sample and current-data previews. Weather, calendar and Todo
+can use a dedicated two-line TC002 layout on new apps; existing definitions
+retain their prior appearance. Search, duplicate, rename and JSON export/import
+manage the library. Exported files contain your entity IDs and app content, so
+store them privately. Dynamic-source polling follows source-specific intervals.
+
 ## 0.2.30
 
 The Rain app can optionally leave the carousel when all twelve upcoming hourly

@@ -7,7 +7,7 @@ import logging
 import os
 import re
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
@@ -120,6 +120,7 @@ STUDIO_KEYS = {
     "chartAutoscale",
     "chartColor",
     "showRainWhenDry",
+    "compactLayout",
 }
 
 DEFAULT_DEFINITION: dict[str, Any] = {
@@ -180,6 +181,7 @@ DEFAULT_DEFINITION: dict[str, Any] = {
     "chartType": "barChart",
     "chartAutoscale": True,
     "showRainWhenDry": True,
+    "compactLayout": False,
     "chartColor": "#4DB8FF",
 }
 
@@ -232,12 +234,17 @@ def validate_definition(payload: Any, *, expected_name: str | None = None) -> di
         raise validation("Use a single-line title", "displayTitle")
     if candidate["sourceType"] == "rain" and candidate["displayTemplate"] != "inherit":
         raise validation("Rain charts use the default template", "displayTemplate")
+    if candidate["compactLayout"] and candidate["sourceType"] in {"weather", "calendar", "todo"} and candidate["displayTemplate"] != "inherit":
+        raise validation("Compact layouts use the default template", "displayTemplate")
     candidate["staticText"] = _text(candidate["staticText"], "staticText", 256)
     candidate["entityId"] = _text(candidate["entityId"], "entityId", 128).lower()
     if candidate["sourceType"] in {"entity", "weather", "rain", "calendar", "todo"} and not ENTITY_ID_RE.fullmatch(
         candidate["entityId"]
     ):
         raise validation("Enter a valid Home Assistant entity ID", "entityId")
+    required_domain = {"weather": "weather", "rain": "weather", "calendar": "calendar", "todo": "todo"}.get(candidate["sourceType"])
+    if required_domain and not candidate["entityId"].startswith(f"{required_domain}."):
+        raise validation(f"Choose a {required_domain} entity", "entityId")
     candidate["attribute"] = _text(candidate["attribute"], "attribute", 64)
     candidate["prefix"] = _text(candidate["prefix"], "prefix", 48)
     candidate["suffix"] = _text(candidate["suffix"], "suffix", 48)
@@ -288,6 +295,7 @@ def validate_definition(payload: Any, *, expected_name: str | None = None) -> di
         "showEmpty",
         "chartAutoscale",
         "showRainWhenDry",
+        "compactLayout",
     ):
         candidate[field] = _boolean(candidate[field], field)
 
@@ -372,7 +380,7 @@ class StudioManager:
         if self._fetch_entity_override is None and self._token:
             timeout = aiohttp.ClientTimeout(total=5)
             self._session = aiohttp.ClientSession(timeout=timeout)
-        await self.refresh_all()
+        await self.refresh_all(force=True)
         self._task = asyncio.create_task(self._loop(), name="studio-apps")
 
     async def stop(self) -> None:
@@ -606,6 +614,17 @@ class StudioManager:
             definition["name"], self._spec(definition, raw, unit), origin="studio"
         )
 
+    def _compact_spec(self, definition: dict[str, Any], heading: str, value: str) -> dict[str, Any]:
+        color = definition["textColor"]
+        return self._spec(
+            definition, value, text_override="", icon_override="",
+            extra={"draw": [
+                ["text", 0, 6, heading[:9].upper(), color],
+                ["line", 0, 8, 51, 8, "#274354"],
+                ["text", 0, 15, value[:9], color],
+            ]},
+        )
+
     @staticmethod
     def _service_entity_payload(payload: Any, entity_id: str) -> dict[str, Any]:
         if isinstance(payload, dict) and isinstance(payload.get("service_response"), dict):
@@ -686,6 +705,11 @@ class StudioManager:
 
         if source_type == "weather":
             text = self._weather_text(definition, state, attributes)
+            if definition["compactLayout"]:
+                condition = (text.split(" · ", 1)[0] if definition["showWeatherText"] else "METEO")[:9]
+                temperature = attributes.get("temperature")
+                value = f"{self._format_number(definition, temperature)}°" if temperature is not None else text
+                return self._compact_spec(definition, condition, value), text
             icon = None
             if definition["dynamicWeatherIcon"]:
                 icon = WEATHER_ICONS.get(state, definition["icon"])
@@ -746,6 +770,20 @@ class StudioManager:
         labels = [label for label in labels if label]
         if not labels and not definition["showEmpty"]:
             raise unavailable("No items to show")
+        if definition["compactLayout"]:
+            heading = "AGENDA" if source_type == "calendar" else f"TODO {len(labels)}"
+            if source_type == "calendar" and items and isinstance(items[0], dict):
+                start = items[0].get("start")
+                if isinstance(start, dict):
+                    start = start.get("dateTime") or start.get("date")
+                if isinstance(start, str):
+                    try:
+                        instant = datetime.fromisoformat(start)
+                        heading = instant.strftime("%H:%M") if "T" in start else instant.strftime("%d/%m")
+                    except ValueError:
+                        pass
+            value = labels[0] if labels else definition["emptyText"]
+            return self._compact_spec(definition, heading, value), labels
         text = f"{definition['prefix']}{' · '.join(labels)}" if labels else definition["emptyText"]
         return self._spec(definition, text, text_override=text), labels
 
@@ -767,6 +805,7 @@ class StudioManager:
             name,
             {"lastValue": None, "lastRawValue": None, "lastError": None, "visible": True},
         )
+        runtime["lastRefreshMs"] = self.engine.monotonic_ms()
         try:
             spec, raw = await self._resolved_spec(definition)
             if self.definitions.get(name) is not definition:
@@ -789,7 +828,10 @@ class StudioManager:
                     and runtime.get("lastSignature") is not None
                 ):
                     self.engine.switch_app(definition["name"], fast=False)
-            text = spec.get("text", "")
+            text = (
+                next((item[3] for item in spec.get("draw", []) if item[0] == "text"), "")
+                if definition["sourceType"] == "rain" else spec.get("text", "")
+            )
             runtime.update(
                 {
                     "lastValue": text,
@@ -797,16 +839,18 @@ class StudioManager:
                     "lastSignature": signature,
                     "lastError": None,
                     "visible": True,
+                    "visibilityReason": None,
+                    "lastUpdatedAt": datetime.now(UTC).isoformat(),
                 }
             )
         except BridgeError as error:
             if self.definitions.get(name) is not definition:
                 return
             if error.message == "No rain forecast in the next 12 hours":
-                runtime.update({"lastError": None, "visible": False})
+                runtime.update({"lastError": None, "visible": False, "visibilityReason": "dryForecast"})
                 self._hide(name)
                 return
-            runtime.update({"lastError": error.message, "visible": not definition["hideUnavailable"]})
+            runtime.update({"lastError": error.message, "visible": not definition["hideUnavailable"], "visibilityReason": "unavailable"})
             if definition["hideUnavailable"]:
                 self._hide(name)
             else:
@@ -818,11 +862,14 @@ class StudioManager:
             runtime.update({"lastError": str(error), "visible": False})
             self._hide(name)
 
-    async def refresh_all(self) -> None:
+    async def refresh_all(self, *, force: bool = False) -> None:
+        now_ms = self.engine.monotonic_ms()
         names = [
             name
             for name, definition in self.definitions.items()
             if definition["sourceType"] != "static"
+            and (force or now_ms - self.runtime.get(name, {}).get("lastRefreshMs", -60_000)
+                 >= (2_000 if definition["sourceType"] in {"entity", "countdown"} else 60_000))
         ]
         if names:
             await asyncio.gather(*(self.refresh(name) for name in names))
@@ -882,6 +929,30 @@ class StudioManager:
         self.engine.set_app_order({"order": order, "disabled": disabled})
         self._save()
 
+    async def rename(self, old_name: str, new_name: str) -> dict[str, Any]:
+        if old_name not in self.definitions:
+            raise not_found(f"Studio app not found: {old_name}", "name")
+        new_name = validate_app_name(new_name)
+        if new_name == old_name:
+            return self.item(old_name)
+        if new_name in self.definitions or new_name in self.engine.pages.pages:
+            raise validation("This app name is already in use", "name")
+        definition = validate_definition({**self.definitions[old_name], "name": new_name})
+        self._spec(definition, None)
+        order = [new_name if name == old_name else name for name in self.engine.pages.order]
+        disabled = {new_name if name == old_name else name for name in self.engine.pages.disabled}
+        runtime = self.runtime.pop(old_name, {})
+        self.definitions.pop(old_name)
+        self._hide(old_name)
+        self.definitions[new_name] = definition
+        self.runtime[new_name] = runtime
+        self._publish(definition, None)
+        self.engine.set_app_order({"order": order, "disabled": sorted(disabled)})
+        self._save()
+        if definition["sourceType"] != "static":
+            await self.refresh(new_name, force=True)
+        return self.item(new_name)
+
     def replace_icon_reference(self, old: str, new: str) -> int:
         """Move saved and currently published apps to a canonical icon name."""
 
@@ -907,13 +978,64 @@ class StudioManager:
             "lastError": runtime.get("lastError"),
             "visible": runtime.get("visible", True),
             "present": name in self.engine.pages.pages,
+            "visibilityReason": runtime.get("visibilityReason"),
+            "lastUpdatedAt": runtime.get("lastUpdatedAt"),
         }
 
     def document(self) -> dict[str, Any]:
         return {
             "apps": [self.item(name) for name in self.definitions],
             "homeAssistantAvailable": self.home_assistant_available,
+            "timezone": self.engine.config.timezone,
         }
+
+    async def import_definitions(self, payload: Any) -> dict[str, Any]:
+        if not isinstance(payload, dict) or not isinstance(payload.get("apps"), list):
+            raise validation("Import must contain an apps list", "apps")
+        if not 1 <= len(payload["apps"]) <= 50:
+            raise validation("Import must contain 1 to 50 apps", "apps")
+        definitions = [validate_definition(item) for item in payload["apps"]]
+        names = [item["name"] for item in definitions]
+        if len(set(names)) != len(names):
+            raise validation("Import contains duplicate app names", "apps")
+        if any(name in self.definitions or name in self.engine.pages.pages for name in names):
+            raise validation("Import name conflicts with an existing app", "apps")
+        for definition in definitions:
+            await self.create(definition)
+        return {"imported": names}
+
+    def _render_preview_spec(self, name: str, spec: dict[str, Any]) -> dict[str, Any]:
+        spec = self.engine._page_spec(name, spec, None)
+        result = self.engine.renderer.render(
+            spec,
+            render_key=f"studio-preview:{name}",
+            elapsed_ms=self.engine.monotonic_ms() % 60_000,
+            settings=self.engine.settings,
+        )
+        pixels = [
+            (result.frame[index] << 16)
+            | (result.frame[index + 1] << 8)
+            | result.frame[index + 2]
+            for index in range(0, len(result.frame), 3)
+        ]
+        description = str(spec.get("text") or " ".join(
+            str(command[3]) for command in spec.get("draw", [])
+            if isinstance(command, list) and len(command) > 3 and command[0] == "text"
+        ) or name)
+        warning = None
+        if len(str(spec.get("text") or "")) > 12 and spec.get("scroll", {}).get("mode") == "static":
+            warning = "Long static text may be clipped on the 52-pixel panel"
+        return {"width": 52, "height": 16, "pixels": pixels, "description": description[:120], "warning": warning}
+
+    async def preview_live(self, name: str) -> dict[str, Any]:
+        definition = self.definitions.get(name)
+        if definition is None:
+            raise not_found(f"Studio app not found: {name}", "name")
+        if definition["sourceType"] == "static":
+            spec = self._spec(definition, definition["staticText"])
+        else:
+            spec, _ = await self._resolved_spec(definition)
+        return self._render_preview_spec(name, spec)
 
     def preview(self, payload: Any, *, sample_value: Any = None) -> dict[str, Any]:
         definition = validate_definition(payload)
@@ -926,8 +1048,10 @@ class StudioManager:
         elif definition["sourceType"] == "weather":
             text = "Soleggiato · 21°C · 55%"
             icon = "sunny" if definition["dynamicWeatherIcon"] else None
-            spec = self._spec(
-                definition, sample_value, text_override=text, icon_override=icon
+            spec = (
+                self._compact_spec(definition, "SOLE", "21°C")
+                if definition["compactLayout"] else
+                self._spec(definition, sample_value, text_override=text, icon_override=icon)
             )
         elif definition["sourceType"] == "rain":
             draw, _, _ = rain_timeline(
@@ -947,24 +1071,15 @@ class StudioManager:
                 icon_override="",
             )
         elif definition["sourceType"] in {"calendar", "todo"}:
-            spec = self._spec(
-                definition,
-                sample_value,
-                text_override=f"{definition['prefix']}Esempio · Secondo elemento",
-            )
+            if definition["compactLayout"]:
+                heading = "AGENDA" if definition["sourceType"] == "calendar" else "TODO 2"
+                spec = self._compact_spec(definition, heading, "Esempio")
+            else:
+                spec = self._spec(
+                    definition,
+                    sample_value,
+                    text_override=f"{definition['prefix']}Esempio · Secondo elemento",
+                )
         else:
             spec = self._spec(definition, sample_value, unit)
-        spec = self.engine._page_spec(definition["name"], spec, None)
-        result = self.engine.renderer.render(
-            spec,
-            render_key=f"studio-preview:{definition['name']}",
-            elapsed_ms=self.engine.monotonic_ms() % 60_000,
-            settings=self.engine.settings,
-        )
-        pixels = [
-            (result.frame[index] << 16)
-            | (result.frame[index + 1] << 8)
-            | result.frame[index + 2]
-            for index in range(0, len(result.frame), 3)
-        ]
-        return {"width": 52, "height": 16, "pixels": pixels}
+        return self._render_preview_spec(definition["name"], spec)

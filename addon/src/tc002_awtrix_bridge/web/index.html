@@ -286,8 +286,19 @@
     .studio-item-copy small { display: block; overflow: hidden; margin-top: 3px; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
     .studio-badge { flex: 0 0 auto; padding: 3px 7px; color: var(--blue); border-radius: 7px; background: rgb(91 188 255 / 8%); font-size: 10px; font-weight: 750; letter-spacing: .05em; text-transform: uppercase; }
     .studio-badge.error { color: var(--danger); background: rgb(255 107 122 / 8%); }
-    .studio-item-actions { display: flex; gap: 5px; margin-top: 10px; }
+    .studio-item-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
     .studio-item-actions .btn { min-height: 32px; padding: 5px 9px; font-size: 12px; }
+    .studio-step { margin: 6px 0 10px; color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+    .studio-source-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; }
+    .studio-source-option { min-height: 70px; padding: 11px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); color: var(--text); text-align: left; cursor: pointer; }
+    .studio-source-option[aria-pressed="true"] { border-color: var(--accent); background: rgb(56 230 197 / 8%); }
+    .studio-source-option strong, .studio-source-option small { display: block; }
+    .studio-source-option small { margin-top: 4px; color: var(--muted); }
+    .studio-advanced { border: 1px solid var(--border); border-radius: 12px; padding: 13px; }
+    .studio-advanced > summary { cursor: pointer; font-weight: 700; }
+    .studio-advanced[open] > summary { margin-bottom: 17px; }
+    .studio-preview-controls { display: flex; gap: 8px; align-items: center; margin-bottom: 9px; }
+    .studio-preview-controls button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
     .btn.danger { color: var(--danger); }
     .icon-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
     .file-button { position: relative; overflow: hidden; }
@@ -584,11 +595,36 @@
               <canvas id="studioScreen" width="52" height="16" aria-label="Anteprima dell’app personalizzata"></canvas>
             </div>
           </div>
+          <div class="studio-preview-controls"><button class="btn" id="studioPreviewExample" type="button" aria-pressed="true">Esempio</button><button class="btn" id="studioPreviewLive" type="button" aria-pressed="false">Dati attuali</button><button class="btn" id="studioPreviewPlay" type="button" aria-pressed="false">▶ Animazione</button></div>
 
           <p class="studio-preview-status" id="studioPreviewStatus" role="status">Completa i campi per vedere l’anteprima.</p>
           <div class="studio-tip" id="studioAccess">Verifico l’accesso a Home Assistant…</div>
 
           <form class="studio-form" id="studioForm">
+            <p class="studio-step">1 · Scegli il contenuto</p>
+            <div class="studio-source-gallery" id="studioPresets"><button class="studio-source-option" type="button" data-studio-preset="temperature"><strong>🌡 Temperatura</strong><small>Valore e unità</small></button><button class="studio-source-option" type="button" data-studio-preset="co2"><strong>◌ CO₂</strong><small>Colore sopra soglia</small></button><button class="studio-source-option" type="button" data-studio-preset="rain"><strong>☔ Pioggia</strong><small>Timeline 52×16</small></button><button class="studio-source-option" type="button" data-studio-preset="calendar"><strong>▦ Prossimo evento</strong><small>Agenda compatta</small></button></div>
+            <p class="subtle">Parti da un esempio oppure scegli il contenuto qui sotto. Per i dati live seleziona poi un’entità.</p>
+            <div class="studio-source-gallery" id="studioSourceGallery"></div>
+            <div class="two-fields">
+              <div class="field">
+                <label for="studioName">Nome app</label>
+                <input id="studioName" type="text" maxlength="32" pattern="[A-Za-z0-9_-]{1,32}" placeholder="es. studio_temperatura" required>
+              </div>
+              <div class="field" id="studioSourceSelectField" hidden>
+                <label for="studioSourceType">Contenuto</label>
+                <select id="studioSourceType">
+                  <option value="static">Testo statico</option>
+                  <option value="entity">Sensore / entità Home Assistant</option>
+                  <option value="countdown">Countdown</option>
+                  <option value="weather">Meteo</option>
+                  <option value="rain">Previsione pioggia</option>
+                  <option value="calendar">Calendario</option>
+                  <option value="todo">Lista Todo</option>
+                </select>
+              </div>
+            </div>
+
+            <p class="studio-step">2 · Disegna la schermata</p>
             <fieldset class="template-picker">
               <legend>Modello grafico</legend>
               <input id="studioDisplayTemplate" type="hidden" value="inherit">
@@ -605,25 +641,6 @@
               <small>Se vuoto, viene usato il nome dell’app. I titoli lunghi vengono abbreviati.</small>
             </div>
 
-            <div class="two-fields">
-              <div class="field">
-                <label for="studioName">Nome app</label>
-                <input id="studioName" type="text" maxlength="32" pattern="[A-Za-z0-9_-]{1,32}" placeholder="es. studio_temperatura" required>
-              </div>
-              <div class="field">
-                <label for="studioSourceType">Contenuto</label>
-                <select id="studioSourceType">
-                  <option value="static">Testo statico</option>
-                  <option value="entity">Sensore / entità Home Assistant</option>
-                  <option value="countdown">Countdown</option>
-                  <option value="weather">Meteo</option>
-                  <option value="rain">Previsione pioggia</option>
-                  <option value="calendar">Calendario</option>
-                  <option value="todo">Lista Todo</option>
-                </select>
-              </div>
-            </div>
-
             <div class="field" id="studioTemplateField" hidden>
               <label for="studioValueTemplate">Formato personalizzato</label>
               <input id="studioValueTemplate" type="text" maxlength="256" placeholder="es. Temperatura {value} {unit}">
@@ -632,7 +649,7 @@
 
             <div class="countdown-fields" id="studioCountdownFields" hidden>
               <div class="two-fields">
-                <div class="field"><label for="studioTargetDateTime">Data e ora evento</label><input id="studioTargetDateTime" type="datetime-local" step="1"></div>
+                <div class="field"><label for="studioTargetDateTime">Data e ora evento</label><input id="studioTargetDateTime" type="datetime-local" step="1"><small id="studioCountdownTimezone">Ora locale del bridge.</small></div>
                 <div class="field"><label for="studioCountdownTitle">Titolo</label><input id="studioCountdownTitle" type="text" maxlength="48" value="Countdown"></div>
               </div>
               <div class="field"><label for="studioReachedText">Testo a scadenza</label><input id="studioReachedText" type="text" maxlength="128" value="Ora!"></div>
@@ -672,6 +689,8 @@
               <div class="switch-row"><div><div class="label">Mostra anche se vuota</div></div><label class="switch"><input id="studioShowEmpty" type="checkbox" checked><span></span></label></div>
             </div>
 
+            <div class="switch-row" id="studioCompactField" hidden><div><div class="label">Layout compatto TC002</div><small>Le informazioni principali in due righe leggibili sul pannello 52×16. Le app già salvate mantengono il layout precedente.</small></div><label class="switch"><input id="studioCompactLayout" type="checkbox" checked><span></span></label></div>
+
             <div class="static-fields" id="studioStaticFields">
               <div class="field">
                 <label for="studioStaticText">Testo</label>
@@ -683,7 +702,9 @@
               <div class="two-fields">
                 <div class="field">
                   <label for="studioEntityId">ID entità</label>
-                  <input id="studioEntityId" type="text" maxlength="128" placeholder="sensor.temperatura_soggiorno">
+                  <input id="studioEntityId" type="text" maxlength="128" list="studioEntitySuggestions" placeholder="Cerca un’entità compatibile">
+                  <datalist id="studioEntitySuggestions"></datalist>
+                  <small id="studioEntityStatus">Seleziona un tipo per cercare le entità Home Assistant.</small>
                 </div>
                 <div class="field">
                   <label for="studioAttribute">Attributo (opzionale)</label>
@@ -742,6 +763,7 @@
               </div>
             </div>
 
+            <details class="studio-advanced" id="studioAdvanced"><summary>Personalizzazione avanzata: icona, colori e testo</summary>
             <div class="two-fields">
               <div class="field">
                 <label for="studioIcon">Icona GIF/JPG</label>
@@ -805,6 +827,8 @@
               <div class="field"><label for="studioHighColor">Da soglia in su</label><input id="studioHighColor" type="color" value="#ff453a"></div>
             </div>
 
+            </details>
+            <p class="studio-step">3 · Quando mostrarla</p>
             <div class="three-fields">
               <div class="field">
                 <label for="studioDuration">Durata (secondi)</label>
@@ -826,6 +850,7 @@
               <div class="field"><label for="studioLifetimeExpiry">Alla scadenza</label><select id="studioLifetimeExpiry"><option value="remove">Rimuovi</option><option value="mark">Segna scaduta</option></select></div>
             </div>
 
+            <details class="studio-advanced" id="studioEffects"><summary>Effetti e movimento</summary>
             <div class="two-fields">
               <div class="field">
                 <label for="studioEffect">Sfondo animato</label>
@@ -850,6 +875,7 @@
               </div>
             </div>
 
+            </details>
             <div class="two-fields">
               <div class="switch-row"><div><div class="label">Scorrimento testo</div><div class="subtle">Se disattivato, il testo resta fermo.</div></div><label class="switch"><input id="studioScrollEnabled" type="checkbox" checked><span></span></label></div>
               <div class="switch-row"><div><div class="label">Mostra quando cambia</div><div class="subtle">Porta subito l’app sul display.</div></div><label class="switch"><input id="studioSwitchOnChange" type="checkbox"><span></span></label></div>
@@ -876,6 +902,7 @@
               </div>
             </div>
 
+            <p class="studio-step">4 · Verifica e salva</p>
             <div class="form-actions">
               <button class="btn" id="resetStudioForm" type="button">Annulla</button>
               <button class="btn primary" id="saveStudioApp" type="submit" value="save">Salva app</button>
@@ -889,7 +916,10 @@
             <h3>Le mie app</h3>
             <span class="value-badge" id="studioCount">0</span>
           </div>
+          <button class="btn" id="studioOrder" type="button">Ordina nel carosello ↗</button>
+          <div class="field"><label for="studioSearch">Cerca app</label><input id="studioSearch" type="search" placeholder="Nome, tipo o entità"></div>
           <div class="studio-list" id="studioList"></div>
+          <div class="form-actions"><button class="btn" id="studioExport" type="button">Esporta app</button><label class="btn file-button">Importa app<input id="studioImport" type="file" accept="application/json,.json"></label></div>
         </aside>
       </div>
     </section>
@@ -1169,6 +1199,13 @@
       studioPreviewTimer: null,
       studioPreviewMessage: "Completa i campi per vedere l’anteprima.",
       studioPreviewValues: {},
+      studioPreviewWarning: false,
+      studioPreviewMode: "example",
+      studioPreviewPlaying: false,
+      studioDirty: false,
+      studioEntities: [],
+      studioEntityCache: {},
+      studioTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
       sonos: null,
       busy: false,
       toastTimer: null,
@@ -1356,6 +1393,59 @@
       "Salva app": "Save app",
       "Salva e mostra": "Save and show",
       "Le mie app": "My apps",
+      "1 · Scegli il contenuto": "1 · Choose content",
+      "2 · Disegna la schermata": "2 · Design the screen",
+      "3 · Quando mostrarla": "3 · When to show it",
+      "4 · Verifica e salva": "4 · Review and save",
+      "Personalizzazione avanzata: icona, colori e testo": "Advanced styling: icon, colours and text",
+      "Effetti e movimento": "Effects and motion",
+      "Esempio": "Example",
+      "Dati attuali": "Current data",
+      "▶ Animazione": "▶ Animation",
+      "Ⅱ Ferma animazione": "Ⅱ Stop animation",
+      "Cerca app": "Search apps",
+      "Nome, tipo o entità": "Name, type or entity",
+      "Esporta app": "Export apps",
+      "Importa app": "Import apps",
+      "Layout compatto TC002": "Compact TC002 layout",
+      "Le informazioni principali in due righe leggibili sul pannello 52×16. Le app già salvate mantengono il layout precedente.": "Key information in two readable lines on the 52×16 panel. Existing saved apps keep their previous layout.",
+      "Il layout compatto usa due righe dedicate al TC002.": "The compact layout uses two dedicated TC002 rows.",
+      "Messaggio fisso": "Fixed message",
+      "Valore Home Assistant": "Home Assistant value",
+      "Tempo rimanente": "Time remaining",
+      "Condizioni attuali": "Current conditions",
+      "Timeline oraria": "Hourly timeline",
+      "Prossimi eventi": "Upcoming events",
+      "Cose da fare": "Things to do",
+      "Carico entità compatibili…": "Loading compatible entities…",
+      "{count} entità compatibili. Scrivi il nome o l’ID per cercare.": "{count} compatible entities. Type a name or ID to search.",
+      "Elenco non disponibile; puoi inserire l’ID manualmente.": "List unavailable; you can enter the ID manually.",
+      "Anteprima con dati di esempio · non modifica il display": "Sample-data preview · does not change the display",
+      "Testo statico lungo: potrebbe essere tagliato sul pannello": "Long static text may be clipped on the panel",
+      "Aggiornata": "Updated",
+      "Valore e unità": "Value and unit",
+      "Colore sopra soglia": "Colour above threshold",
+      "Agenda compatta": "Compact agenda",
+      "Prossimo evento": "Next event",
+      "Ordina nel carosello ↗": "Order in carousel ↗",
+      "Fuso orario del bridge": "Bridge time zone",
+      "Ora locale del bridge.": "Bridge local time.",
+      "Parti da un esempio oppure scegli il contenuto qui sotto. Per i dati live seleziona poi un’entità.": "Start from an example or choose content below. Select an entity for live data.",
+      "Dati attuali dell’app salvata · le modifiche non salvate non sono incluse": "Current data from the saved app · unsaved changes are not included",
+      "Scartare le modifiche non salvate?": "Discard unsaved changes?",
+      "Duplica": "Duplicate",
+      "Rinomina": "Rename",
+      "Disattivata": "Disabled",
+      "Asciutto": "Dry",
+      "Nel carosello": "In carousel",
+      "Nessuna pioggia prevista nelle prossime 12 ore": "No rain forecast in the next 12 hours",
+      "Nuovo nome app (lettere, numeri, _ o -)": "New app name (letters, digits, _ or -)",
+      "App rinominata": "App renamed",
+      "File troppo grande": "File too large",
+      "Formato di esportazione non valido": "Invalid export format",
+      "Nomi duplicati o importazione vuota": "Duplicate names or empty import",
+      "Importare {count} app? Le app esistenti non saranno sostituite.": "Import {count} apps? Existing apps will not be replaced.",
+      "Importate {count} app": "Imported {count} apps",
       "Display": "Display",
       "Sistema · TC002": "System · TC002",
       "Centro impostazioni": "Settings center",
@@ -1503,7 +1593,7 @@
       "Nascosta": "Hidden",
       "Modifica": "Edit",
       "Elimina": "Delete",
-      "Connesso a Home Assistant: le app dinamiche si aggiornano automaticamente ogni 2 secondi.": "Connected to Home Assistant: dynamic apps update automatically every 2 seconds.",
+      "Connesso a Home Assistant: sensori e countdown ogni 2 secondi; meteo, pioggia e liste ogni minuto.": "Connected to Home Assistant: sensors and countdowns update every 2 seconds; weather, rain and lists every minute.",
       "Le app statiche funzionano; l’API Home Assistant non è disponibile per quelle dinamiche.": "Static apps work; the Home Assistant API is unavailable for dynamic apps.",
       "Per sicurezza App Studio è disponibile solo da Home Assistant → TC002 AWTRIX Bridge → Apri interfaccia utente Web.": "For security, App Studio is available only from Home Assistant → TC002 AWTRIX Bridge → Open Web UI.",
       "Anteprima aggiornata · non modifica il display": "Preview updated · does not change the display",
@@ -1614,7 +1704,7 @@
       $("studioAccess").classList.toggle("error", state.studioAccessError);
       $("studioPreviewStatus").textContent = t(
         state.studioPreviewMessage, state.studioPreviewValues,
-      );
+      ) + (state.studioPreviewWarning ? ` · ${t("Testo statico lungo: potrebbe essere tagliato sul pannello")}` : "");
       const emptyIcon = [...$("studioIcon").options].find(option => option.value === "");
       if (emptyIcon) emptyIcon.textContent = t("Nessuna icona");
       if ($("sonosPlayer").options.length === 1 && !$("sonosPlayer").options[0].value) {
@@ -2038,12 +2128,115 @@
         chartType: $("studioChartType").value,
         chartAutoscale: $("studioChartAutoscale").checked,
         showRainWhenDry: $("studioShowRainWhenDry").checked,
+        compactLayout: $("studioCompactLayout").checked && ["weather", "calendar", "todo"].includes($("studioSourceType").value),
         chartColor: $("studioChartColor").value.toUpperCase(),
       };
     }
 
+    const STUDIO_SOURCES = [
+      ["static", "Testo", "Messaggio fisso"], ["entity", "Sensore", "Valore Home Assistant"],
+      ["countdown", "Countdown", "Tempo rimanente"], ["weather", "Meteo", "Condizioni attuali"],
+      ["rain", "Pioggia", "Timeline oraria"], ["calendar", "Calendario", "Prossimi eventi"],
+      ["todo", "Todo", "Cose da fare"],
+    ];
+    function buildStudioSourceGallery() {
+      const gallery = $("studioSourceGallery");
+      gallery.replaceChildren();
+      for (const [type, label, description] of STUDIO_SOURCES) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "studio-source-option";
+        button.dataset.studioSource = type;
+        button.innerHTML = `<strong>${t(label)}</strong><small>${t(description)}</small>`;
+        button.addEventListener("click", () => {
+          $("studioSourceType").value = type;
+          showStudioSourceFields();
+          state.studioDirty = true;
+        });
+        gallery.append(button);
+      }
+    }
+
+    async function loadStudioEntities(type) {
+      const domains = {entity: ["sensor", "binary_sensor", "input_number"], weather: ["weather"], rain: ["weather"], calendar: ["calendar"], todo: ["todo"]}[type];
+      if (!domains || !state.studioAuthorized) return;
+      const status = $("studioEntityStatus");
+      const cached = state.studioEntityCache[type];
+      if (cached && Date.now() - cached.at < 60_000) {
+        state.studioEntities = cached.entities;
+        $("studioEntitySuggestions").replaceChildren(...cached.entities.map(entity => new Option(`${entity.name} · ${entity.state}${entity.unit}`, entity.entityId)));
+        status.textContent = t("{count} entità compatibili. Scrivi il nome o l’ID per cercare.", {count: cached.entities.length});
+        return;
+      }
+      status.textContent = t("Carico entità compatibili…");
+      try {
+        const groups = await Promise.all(domains.map(domain => request(`api/v1/studio/entities?domain=${domain}`)));
+        if ($("studioSourceType").value !== type) return;
+        const entities = groups.flatMap(group => group.entities || []);
+        state.studioEntities = entities;
+        state.studioEntityCache[type] = {at: Date.now(), entities};
+        $("studioEntitySuggestions").replaceChildren(...entities.map(entity => {
+          const option = new Option(`${entity.name} · ${entity.state}${entity.unit}`, entity.entityId);
+          return option;
+        }));
+        status.textContent = t("{count} entità compatibili. Scrivi il nome o l’ID per cercare.", {count: entities.length});
+      } catch (error) {
+        status.textContent = t("Elenco non disponibile; puoi inserire l’ID manualmente.");
+      }
+    }
+
+    function syncStudioPreviewMode() {
+      $("studioPreviewExample").setAttribute("aria-pressed", String(state.studioPreviewMode === "example"));
+      $("studioPreviewLive").setAttribute("aria-pressed", String(state.studioPreviewMode === "live"));
+      $("studioPreviewLive").disabled = !state.studioEditingName;
+    }
+
+    function duplicateStudioApp(app) {
+      editStudioApp(app);
+      if (state.studioEditingName !== app.name) return;
+      state.studioEditingName = null;
+      $("studioName").readOnly = false;
+      const base = app.name.slice(0, 25);
+      let name = `${base}_copy`;
+      for (let index = 2; state.studioApps.some(item => item.name.toLowerCase() === name.toLowerCase()); index++) name = `${base}_copy${index}`;
+      $("studioName").value = name;
+      state.studioPreviewMode = "example";
+      state.studioDirty = true;
+      syncStudioPreviewMode();
+      scheduleStudioPreview();
+    }
+
+    function applyStudioPreset(preset) {
+      if (state.studioDirty && !window.confirm(t("Scartare le modifiche non salvate?"))) return;
+      resetStudioForm();
+      const settings = {
+        temperature: {name: "temperatura", type: "entity", threshold: false, color: "#FFBD69"},
+        co2: {name: "co2", type: "entity", threshold: true, color: "#8CE0AF"},
+        rain: {name: "pioggia", type: "rain", threshold: false, color: "#68D9FF"},
+        calendar: {name: "prossimo_evento", type: "calendar", threshold: false, color: "#B8A6FF"},
+      }[preset];
+      if (!settings) return;
+      let name = settings.name;
+      for (let index = 2; state.studioApps.some(app => app.name.toLowerCase() === name.toLowerCase()); index++) {
+        name = `${settings.name}_${index}`;
+      }
+      $("studioName").value = name;
+      $("studioSourceType").value = settings.type;
+      $("studioTextColor").value = settings.color.toLowerCase();
+      $("studioTextColorValue").value = settings.color;
+      $("studioUseThreshold").checked = settings.threshold;
+      if (settings.threshold) $("studioThresholdValue").value = "1000";
+      $("studioCompactLayout").checked = settings.type === "calendar";
+      showStudioSourceFields();
+      state.studioDirty = true;
+      $("studioEntityId").focus();
+    }
+
     function showStudioSourceFields() {
       const type = $("studioSourceType").value;
+      document.querySelectorAll("[data-studio-source]").forEach(button => {
+        button.setAttribute("aria-pressed", String(button.dataset.studioSource === type));
+      });
       if (type === "rain") $("studioDisplayTemplate").value = "inherit";
       syncTemplatePicker();
       const needsEntity = ["entity", "weather", "rain", "calendar", "todo"].includes(type);
@@ -2054,12 +2247,19 @@
       $("studioWeatherFields").hidden = type !== "weather";
       $("studioRainFields").hidden = type !== "rain";
       $("studioListFields").hidden = !["calendar", "todo"].includes(type);
+      $("studioCompactField").hidden = !["weather", "calendar", "todo"].includes(type);
+      if (["weather", "calendar", "todo"].includes(type) && $("studioCompactLayout").checked) $("studioDisplayTemplate").value = "inherit";
+      syncTemplatePicker();
       $("studioEntityId").required = needsEntity;
       $("studioTargetDateTime").required = type === "countdown";
+      $("studioAdvanced").hidden = type === "rain";
+      $("studioEffects").hidden = type === "rain";
+      loadStudioEntities(type);
       scheduleStudioPreview();
     }
 
     function setStudioAccess(allowed, message, error = false) {
+      const wasAllowed = state.studioAuthorized;
       state.studioAuthorized = allowed;
       state.studioAccessMessage = message;
       state.studioAccessError = error;
@@ -2070,7 +2270,16 @@
         control.disabled = !allowed;
       });
       $("newStudioApp").disabled = !allowed;
-      if (allowed) { showStudioSourceFields(); loadTemplateGallery(); }
+      if (allowed) syncTemplatePicker();
+      if (allowed && !wasAllowed) { showStudioSourceFields(); loadTemplateGallery(); }
+    }
+
+    function formatStudioDateTime(date) {
+      const parts = Object.fromEntries(new Intl.DateTimeFormat("en-GB", {
+        timeZone: state.studioTimezone, year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+      }).formatToParts(date).map(part => [part.type, part.value]));
+      return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}`;
     }
 
     function resetStudioForm() {
@@ -2081,7 +2290,7 @@
       $("studioSourceType").value = "static";
       $("studioStaticText").value = t("Ciao!");
       const target = new Date(Date.now() + 7 * 86400000);
-      $("studioTargetDateTime").value = target.toISOString().slice(0, 19);
+      $("studioTargetDateTime").value = formatStudioDateTime(target);
       $("studioSample").value = "123";
       $("studioUseEntityUnit").checked = true;
       $("studioHideUnavailable").checked = true;
@@ -2128,13 +2337,21 @@
       $("studioChartAutoscale").checked = true;
       $("studioShowRainWhenDry").checked = true;
       $("studioChartColor").value = "#4db8ff";
+      $("studioCompactLayout").checked = true;
+      state.studioPreviewMode = "example";
+      state.studioDirty = false;
+      syncStudioPreviewMode();
       showStudioSourceFields();
       renderStudioList();
     }
 
     function editStudioApp(app) {
+      if (state.studioDirty && !window.confirm(t("Scartare le modifiche non salvate?"))) return;
       selectWorkspaceTab("studio");
       state.studioEditingName = app.name;
+      state.studioDirty = false;
+      state.studioPreviewMode = "example";
+      syncStudioPreviewMode();
       $("studioName").value = app.name;
       $("studioName").readOnly = true;
       $("studioSourceType").value = app.sourceType;
@@ -2197,6 +2414,7 @@
       $("studioChartAutoscale").checked = app.chartAutoscale;
       $("studioShowRainWhenDry").checked = app.showRainWhenDry !== false;
       $("studioChartColor").value = app.chartColor.toLowerCase();
+      $("studioCompactLayout").checked = app.compactLayout === true;
       showStudioSourceFields();
       renderStudioList();
       $("studio").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -2204,8 +2422,11 @@
 
     function renderStudioList() {
       const list = $("studioList");
+      if (list.contains(document.activeElement)) return;
       list.replaceChildren();
-      $("studioCount").textContent = String(state.studioApps.length);
+      const query = $("studioSearch").value.trim().toLowerCase();
+      const filtered = state.studioApps.filter(app => `${app.name} ${app.sourceType} ${app.entityId}`.toLowerCase().includes(query));
+      $("studioCount").textContent = `${filtered.length}/${state.studioApps.length}`;
       if (!state.studioApps.length) {
         const empty = document.createElement("div");
         empty.className = "studio-empty";
@@ -2216,7 +2437,7 @@
         return;
       }
 
-      state.studioApps.forEach((app) => {
+      filtered.forEach((app) => {
         const item = document.createElement("div");
         item.className = "studio-item";
         if (app.name === state.studioEditingName) item.classList.add("active");
@@ -2239,11 +2460,12 @@
         const source = sourceLabels[app.sourceType] || app.sourceType;
         const value = app.lastValue || (app.sourceType === "static" ? app.staticText : t("in attesa"));
         detail.textContent = `${source} · ${value}`;
+        if (app.lastUpdatedAt) detail.title = `${detail.textContent} · ${t("Aggiornata")} ${new Date(app.lastUpdatedAt).toLocaleTimeString(interfaceLanguage)}`;
         copy.append(title, detail);
         const badge = document.createElement("span");
         badge.className = `studio-badge${app.lastError ? " error" : ""}`;
-        badge.textContent = app.lastError ? t("Errore") : app.present ? t("Attiva") : t("Nascosta");
-        badge.title = app.lastError || "";
+        badge.textContent = !app.enabled ? t("Disattivata") : app.visibilityReason === "dryForecast" ? t("Asciutto") : app.lastError ? t("Errore") : app.present ? t("Nel carosello") : t("Nascosta");
+        badge.title = app.lastError || (app.visibilityReason === "dryForecast" ? t("Nessuna pioggia prevista nelle prossime 12 ore") : "");
         top.append(copy, badge);
 
         const actions = document.createElement("div");
@@ -2253,6 +2475,16 @@
         edit.type = "button";
         edit.textContent = t("Modifica");
         edit.addEventListener("click", () => editStudioApp(app));
+        const duplicate = document.createElement("button");
+        duplicate.className = "btn";
+        duplicate.type = "button";
+        duplicate.textContent = t("Duplica");
+        duplicate.addEventListener("click", () => duplicateStudioApp(app));
+        const rename = document.createElement("button");
+        rename.className = "btn";
+        rename.type = "button";
+        rename.textContent = t("Rinomina");
+        rename.addEventListener("click", () => renameStudioApp(app));
         const show = document.createElement("button");
         show.className = "btn";
         show.type = "button";
@@ -2264,7 +2496,7 @@
         remove.type = "button";
         remove.textContent = t("Elimina");
         remove.addEventListener("click", () => deleteStudioApp(app.name));
-        actions.append(edit, show, remove);
+        actions.append(edit, duplicate, rename, show, remove);
         item.append(top, actions);
         list.append(item);
       });
@@ -2291,8 +2523,14 @@
       try {
         const document = await request("api/v1/studio/apps");
         state.studioApps = document.apps || [];
+        if (document.timezone) {
+          const timezoneChanged = state.studioTimezone !== document.timezone;
+          state.studioTimezone = document.timezone;
+          $("studioCountdownTimezone").textContent = `${t("Fuso orario del bridge")}: ${document.timezone}`;
+          if (timezoneChanged && !state.studioDirty && !state.studioEditingName) $("studioTargetDateTime").value = formatStudioDateTime(new Date(Date.now() + 7 * 86400000));
+        }
         const message = document.homeAssistantAvailable
-          ? "Connesso a Home Assistant: le app dinamiche si aggiornano automaticamente ogni 2 secondi."
+          ? "Connesso a Home Assistant: sensori e countdown ogni 2 secondi; meteo, pioggia e liste ogni minuto."
           : "Le app statiche funzionano; l’API Home Assistant non è disponibile per quelle dinamiche.";
         setStudioAccess(true, message, !document.homeAssistantAvailable);
         renderStudioList();
@@ -2318,19 +2556,27 @@
       const revision = state.previewRevision;
       state.previewPending = true;
       try {
-        const preview = await request("api/v1/studio/preview", {
-          method: "POST",
-          body: { ...studioDefinitionFromForm(), sampleValue: $("studioSample").value },
-        });
+        const live = state.studioPreviewMode === "live" && state.studioEditingName;
+        const preview = live
+          ? await request(`api/v1/studio/apps/${encodeURIComponent(state.studioEditingName)}/preview`)
+          : await request("api/v1/studio/preview", {
+            method: "POST",
+            body: { ...studioDefinitionFromForm(), sampleValue: $("studioSample").value },
+          });
         if (revision !== state.previewRevision) return;
         drawScreen(preview, "studioScreen");
+        $("studioScreen").setAttribute("aria-label", `${t("Anteprima dell’app personalizzata")}: ${preview.description || ""}`);
         $("studioScreen").style.opacity = "1";
-        state.studioPreviewMessage = "Anteprima aggiornata · non modifica il display";
+        state.studioPreviewMessage = live
+          ? "Dati attuali dell’app salvata · le modifiche non salvate non sono incluse"
+          : "Anteprima con dati di esempio · non modifica il display";
+        state.studioPreviewWarning = Boolean(preview.warning);
         state.studioPreviewValues = {};
-        $("studioPreviewStatus").textContent = t(state.studioPreviewMessage);
+        $("studioPreviewStatus").textContent = t(state.studioPreviewMessage) + (state.studioPreviewWarning ? ` · ${t("Testo statico lungo: potrebbe essere tagliato sul pannello")}` : "");
       } catch (error) {
         if (revision !== state.previewRevision) return;
         $("studioScreen").style.opacity = ".25";
+        state.studioPreviewWarning = false;
         state.studioPreviewMessage = "Anteprima non disponibile: {error}";
         state.studioPreviewValues = {error: error.message};
         $("studioPreviewStatus").textContent = t(
@@ -2354,6 +2600,8 @@
           { method: editing ? "PUT" : "POST", body: definition },
         );
         state.studioEditingName = result.name;
+        state.studioDirty = false;
+        syncStudioPreviewMode();
         showToast(editing ? t("App aggiornata") : t("App creata e salvata"));
         await Promise.all([loadStudio(), refreshLive()]);
         if (showAfterSave && result.present && result.enabled) await switchApp(result.name);
@@ -2377,6 +2625,48 @@
       } finally {
         setBusy(false);
       }
+    }
+
+    async function renameStudioApp(app) {
+      const name = window.prompt(t("Nuovo nome app (lettere, numeri, _ o -)"), app.name)?.trim();
+      if (!name || name === app.name) return;
+      try {
+        const result = await request(`api/v1/studio/apps/${encodeURIComponent(app.name)}/rename`, {method: "POST", body: {name}});
+        if (state.studioEditingName === app.name) {
+          state.studioEditingName = result.name;
+          $("studioName").value = result.name;
+        }
+        await Promise.all([loadStudio(), refreshLive()]);
+        showToast(t("App rinominata"));
+      } catch (error) { showToast(error.message, true); }
+    }
+
+    function exportStudioApps() {
+      const apps = state.studioApps.map(({lastValue, lastRawValue, lastError, visible, present, visibilityReason, lastUpdatedAt, ...definition}) => definition);
+      const blob = new Blob([JSON.stringify({format: "tc002-studio-v1", apps}, null, 2)], {type: "application/json"});
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "tc002-studio-apps.json";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function importStudioApps(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try {
+        if (file.size > 256_000) throw new Error(t("File troppo grande"));
+        const document = JSON.parse(await file.text());
+        if (document.format !== "tc002-studio-v1" || !Array.isArray(document.apps)) throw new Error(t("Formato di esportazione non valido"));
+        const names = document.apps.map(app => app.name);
+        if (!names.length || names.length > 50 || names.some(name => state.studioApps.some(app => app.name === name))) throw new Error(t("Nomi duplicati o importazione vuota"));
+        if (!window.confirm(t("Importare {count} app? Le app esistenti non saranno sostituite.", {count: names.length}))) return;
+        const result = await request("api/v1/studio/import", {method: "POST", body: document});
+        await Promise.all([loadStudio(), refreshLive()]);
+        showToast(t("Importate {count} app", {count: result.imported.length}));
+      } catch (error) { showToast(error.message, true); }
+      finally { event.target.value = ""; }
     }
 
     async function uploadStudioIcon(event) {
@@ -2814,9 +3104,27 @@
     $("moodlightForm").addEventListener("submit", applyMoodlight);
     $("indicatorsForm").addEventListener("submit", applyIndicators);
     $("studioSourceType").addEventListener("change", showStudioSourceFields);
+    document.querySelectorAll("[data-studio-preset]").forEach(button => button.addEventListener("click", () => applyStudioPreset(button.dataset.studioPreset)));
+    $("studioOrder").addEventListener("click", () => { selectWorkspaceTab("screens"); $("panel-screens").scrollIntoView({behavior: "smooth", block: "start"}); });
+    $("studioEntityId").addEventListener("input", () => {
+      const entity = state.studioEntities.find(item => item.entityId === $("studioEntityId").value.trim());
+      if (entity) $("studioEntityStatus").textContent = `${entity.name} · ${entity.state}${entity.unit}`;
+    });
+    $("studioCompactLayout").addEventListener("change", showStudioSourceFields);
+    $("studioSearch").addEventListener("input", renderStudioList);
+    $("studioExport").addEventListener("click", exportStudioApps);
+    $("studioImport").addEventListener("change", importStudioApps);
+    $("studioPreviewExample").addEventListener("click", () => { state.studioPreviewMode = "example"; syncStudioPreviewMode(); scheduleStudioPreview(); });
+    $("studioPreviewLive").addEventListener("click", () => { state.studioPreviewMode = "live"; syncStudioPreviewMode(); scheduleStudioPreview(); });
+    $("studioPreviewPlay").addEventListener("click", () => {
+      state.studioPreviewPlaying = !state.studioPreviewPlaying;
+      $("studioPreviewPlay").setAttribute("aria-pressed", String(state.studioPreviewPlaying));
+      $("studioPreviewPlay").textContent = state.studioPreviewPlaying ? t("Ⅱ Ferma animazione") : t("▶ Animazione");
+      scheduleStudioPreview();
+    });
     $("studioForm").addEventListener("submit", saveStudioApp);
-    $("newStudioApp").addEventListener("click", resetStudioForm);
-    $("resetStudioForm").addEventListener("click", resetStudioForm);
+    $("newStudioApp").addEventListener("click", () => { if (!state.studioDirty || window.confirm(t("Scartare le modifiche non salvate?"))) resetStudioForm(); });
+    $("resetStudioForm").addEventListener("click", () => { if (!state.studioDirty || window.confirm(t("Scartare le modifiche non salvate?"))) resetStudioForm(); });
     $("studioIconUpload").addEventListener("change", uploadStudioIcon);
     $("importLametricFaithful").addEventListener("click", () => importLametricIcon("faithful2x"));
     $("importLametricOptimized").addEventListener("click", () => importLametricIcon("tc002Optimized"));
@@ -2832,7 +3140,7 @@
     $("studioBackgroundColor").addEventListener("input", (event) => {
       $("studioBackgroundColorValue").value = event.target.value.toUpperCase();
     });
-    $("studioForm").addEventListener("input", scheduleStudioPreview);
+    $("studioForm").addEventListener("input", () => { state.studioDirty = true; scheduleStudioPreview(); });
     $("studioForm").addEventListener("change", scheduleStudioPreview);
     $("refreshAll").addEventListener("click", async () => {
       await Promise.all([loadConfiguration(), refreshLive(), loadStudio(), loadSonos(true)]);
@@ -2870,13 +3178,15 @@
     function syncTemplatePicker() {
       const selected = $("studioDisplayTemplate").value;
       const rain = $("studioSourceType").value === "rain";
+      const compact = $("studioCompactLayout").checked && ["weather", "calendar", "todo"].includes($("studioSourceType").value);
       document.querySelectorAll("[data-template]").forEach(button => {
         button.setAttribute("aria-pressed", String(button.dataset.template === selected));
-        button.disabled = !state.studioAuthorized || (rain && button.dataset.template !== "inherit");
+        button.disabled = !state.studioAuthorized || ((rain || compact) && button.dataset.template !== "inherit");
       });
       $("studioDisplayTitleField").hidden = selected !== "labelled";
       $("templateHelp").textContent = rain
         ? t("Le previsioni di pioggia usano una timeline 52×16 dedicata.")
+        : compact ? t("Il layout compatto usa due righe dedicate al TC002.")
         : t("Il modello cambia solo questa app. Contenuto e colori restano personalizzabili.");
     }
 
@@ -2923,12 +3233,19 @@
     });
     $("interfaceLanguage").addEventListener("change", event => {
       setInterfaceLanguage(event.target.value);
+      buildStudioSourceGallery();
+      showStudioSourceFields();
     });
     document.querySelector('.top-link[href="#studio"]').addEventListener("click", () => selectWorkspaceTab("studio"));
     window.addEventListener("hashchange", () => selectWorkspaceTab(location.hash.slice(1), false));
     selectWorkspaceTab(location.hash.slice(1), false);
 
     async function initialize() {
+      buildStudioSourceGallery();
+      document.querySelectorAll("#studioForm .switch-row input[type=checkbox]").forEach(input => {
+        const label = input.closest(".switch-row")?.querySelector(".label")?.textContent;
+        if (label && !input.getAttribute("aria-label")) input.setAttribute("aria-label", label);
+      });
       resetStudioForm();
       await Promise.all([
         loadConfiguration(), refreshLive(), loadStudioIcons(), loadStudio(), loadSonos(true),
@@ -2936,7 +3253,7 @@
       poll(refreshLive, 1000);
       poll(() => loadSonos(false), 1000);
       poll(loadStudio, 4000);
-      poll(renderStudioPreview, 700);
+      poll(() => state.studioPreviewPlaying && renderStudioPreview(), 300);
     }
 
     setInterfaceLanguage(preferredLanguage(), false);
