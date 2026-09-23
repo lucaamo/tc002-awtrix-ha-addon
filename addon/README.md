@@ -22,6 +22,11 @@ playlist URI, volume step and long-press threshold. With the native companion,
 the knob and rocker become play/pause, next/previous and Sonos volume controls
 while a dedicated now-playing screen pauses the normal carousel.
 
+## 0.2.34
+
+The health and device endpoints now report the same installed version shown
+by Home Assistant.
+
 ## 0.2.33
 
 App Studio includes a Birthday source. Add people and personalized messages

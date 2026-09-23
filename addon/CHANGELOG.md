@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.34
+
+- Keep the Python package version and Home Assistant add-on version in sync
+  so health and device status report the installed release accurately.
+
 ## 0.2.33
 
 - Add a Birthday source to App Studio. Enter people and personalized messages

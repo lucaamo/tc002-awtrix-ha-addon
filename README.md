@@ -19,9 +19,10 @@ Do not uninstall or disable it until its options and `/data` content have been
 copied to the repository-installed app and the new app has passed a live check.
 The two apps cannot run together on the same TCP/UDP ports and MQTT identity.
 
-Release 0.2.33 adds private birthday lists to App Studio, with manual entry,
-CSV upload, personalized messages, and day-only carousel visibility.
-Source change: private development commit `462306a`.
+Release 0.2.34 adds private birthday lists to App Studio, with manual entry,
+CSV upload, personalized messages, and day-only carousel visibility. It also
+keeps the Python package and Home Assistant version in sync.
+Source changes: private development commits `462306a` and `2b171d1`.
 It is based on development commit `ee5763d`.
 
 The repository also includes a one-time importer for existing local installations.
