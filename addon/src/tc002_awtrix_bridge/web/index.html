@@ -621,6 +621,7 @@
                   <option value="rain">Previsione pioggia</option>
                   <option value="calendar">Calendario</option>
                   <option value="todo">Lista Todo</option>
+                  <option value="birthday">Compleanni</option>
                 </select>
               </div>
             </div>
@@ -688,6 +689,17 @@
               </div>
               <div class="field"><label for="studioEmptyText">Testo lista vuota</label><input id="studioEmptyText" type="text" maxlength="128" value="Nessun elemento"></div>
               <div class="switch-row"><div><div class="label">Mostra anche se vuota</div></div><label class="switch"><input id="studioShowEmpty" type="checkbox" checked><span></span></label></div>
+            </div>
+
+            <div id="studioBirthdayFields" hidden>
+              <p class="field-help">L'app compare solo nel giorno del compleanno, secondo il fuso orario del bridge. Il messaggio scorre sul display; usa {name} per inserire il nome. Il 29 febbraio compare solo negli anni bisestili.</p>
+              <div id="studioBirthdayList"></div>
+              <div class="button-row">
+                <button type="button" class="mini" id="studioBirthdayAdd">Aggiungi compleanno</button>
+                <label class="mini" for="studioBirthdayUpload">Carica CSV</label>
+                <input id="studioBirthdayUpload" type="file" accept=".csv,text/csv" hidden>
+              </div>
+              <small>CSV UTF-8 con intestazione name,date,message. Data nel formato MM-DD oppure YYYY-MM-DD; l'anno non viene salvato. Il caricamento aggiunge le righe alla lista.</small>
             </div>
 
             <div class="switch-row" id="studioCompactField" hidden><div><div class="label">Layout compatto TC002</div><small>Le informazioni principali in due righe leggibili sul pannello 52×16. Le app già salvate mantengono il layout precedente.</small></div><label class="switch"><input id="studioCompactLayout" type="checkbox" checked><span></span></label></div>
@@ -938,7 +950,7 @@
           <div class="settings-tile"><span class="settings-tag available">Disponibile ora</span><h3>Ora e schermate</h3><p>Formato dell’ora, durata delle app e velocità di scorrimento. Il fuso orario proviene dalla configurazione del bridge.</p><a href="#settingsForm">Apri controlli ora e app</a></div>
           <div class="settings-tile"><span class="settings-tag available">Disponibile ora</span><h3>Audio e manopola</h3><p>Volume locale, feedback della ghiera e modalità Sonos. Disponibilità audio secondo l’adapter.</p><a href="#settingsForm">Apri controlli audio</a></div>
           <div class="settings-tile"><span class="settings-tag">Firmware stock</span><h3>Rete Wi‑Fi</h3><p>Il bridge non configura le credenziali Wi‑Fi del TC002. Usa la configurazione Ulanzi stock; il primo setup del futuro runtime locale è ancora da qualificare.</p><strong id="settingsWifiState">Stato rete non disponibile</strong><a href="https://docs.ulanzistudio.com/tc002/en/software/ulanzi-studio" target="_blank" rel="noopener noreferrer">Guida Ulanzi Wi‑Fi ↗</a></div>
-          <div class="settings-tile"><span class="settings-tag">Configurazione bridge</span><h3>MQTT e Home Assistant</h3><p>Broker, credenziali, TLS e discovery sono impostati nella configurazione del bridge o dell’add-on Home Assistant. Nessuna password viene mostrata qui.</p><strong id="settingsMqttState">Stato broker non disponibile</strong><a href="https://github.com/lucaamo/tc002-awtrix-ha-addon/blob/main/addon/config.yaml" target="_blank" rel="noopener noreferrer">Esempio configurazione bridge ↗</a></div>
+          <div class="settings-tile"><span class="settings-tag">Configurazione bridge</span><h3>MQTT e Home Assistant</h3><p>Broker, credenziali, TLS e discovery sono impostati nella configurazione del bridge o dell’add-on Home Assistant. Nessuna password viene mostrata qui.</p><strong id="settingsMqttState">Stato broker non disponibile</strong><a href="https://github.com/lucaamo/tc002-awtrix-bridge/blob/milestone/runtime-foundations/config.example.yaml" target="_blank" rel="noopener noreferrer">Esempio configurazione bridge ↗</a></div>
           <div class="settings-tile"><span class="settings-tag">In qualificazione</span><h3>Accesso, aggiornamenti e recupero</h3><p>Account locale, provisioning, aggiornamento e ripristino non sono controlli disponibili sul TC002 attuale. Non eseguire reset o flash da questa pagina.</p><strong id="settingsRuntimeState">Companion temporaneo</strong></div>
           <div class="settings-tile"><span class="settings-tag">Configurazione bridge</span><h3>Fuso orario e servizi</h3><p>Il fuso orario viene caricato all’avvio del bridge. NTP, dimmer notturno, mDNS e metriche sul TC002 richiedono il runtime locale e prove hardware.</p></div>
           <div class="settings-tile"><span class="settings-tag available">Disponibile ora</span><h3>Notifiche e integrazioni</h3><p>Notifiche, moodlight, indicatori, app personalizzate e Sonos sono gestiti dal bridge.</p><a href="#awtrixTools">Apri strumenti AWTRIX</a></div>
@@ -1590,6 +1602,22 @@
       "meteo": "weather",
       "pioggia": "rain",
       "calendario": "calendar",
+      "Compleanni": "Birthdays",
+      "Messaggi nel giorno speciale": "Messages on the special day",
+      "Nome": "Name",
+      "Data (MM-GG)": "Date (MM-DD)",
+      "Messaggio": "Message",
+      "Aggiungi compleanno": "Add birthday",
+      "Carica CSV": "Upload CSV",
+      "Rimuovi compleanno": "Remove birthday",
+      "Buon compleanno {name}!": "Happy birthday {name}!",
+      "Massimo 100 compleanni": "Maximum 100 birthdays",
+      "CSV troppo grande": "CSV file is too large",
+      "CSV non valido: virgolette non chiuse": "Invalid CSV: unclosed quote",
+      "Usa le colonne name,date,message": "Use the name,date,message columns",
+      "Riga CSV {line} non valida": "Invalid CSV row {line}",
+      "Il CSV deve contenere da 1 a 100 compleanni": "The CSV must contain 1 to 100 birthdays",
+      "{count} compleanni aggiunti": "{count} birthdays added",
       "in attesa": "waiting",
       "Errore": "Error",
       "Attiva": "Active",
@@ -1597,7 +1625,7 @@
       "Modifica": "Edit",
       "Elimina": "Delete",
       "Connesso a Home Assistant: sensori e countdown ogni 2 secondi; meteo, pioggia e liste ogni minuto.": "Connected to Home Assistant: sensors and countdowns update every 2 seconds; weather, rain and lists every minute.",
-      "Le app statiche funzionano; l’API Home Assistant non è disponibile per quelle dinamiche.": "Static apps work; the Home Assistant API is unavailable for dynamic apps.",
+      "Le app statiche e i compleanni funzionano; l’API Home Assistant non è disponibile per le altre sorgenti dinamiche.": "Static and birthday apps work; the Home Assistant API is unavailable for other dynamic sources.",
       "Per sicurezza App Studio è disponibile solo da Home Assistant → TC002 AWTRIX Bridge → Apri interfaccia utente Web.": "For security, App Studio is available only from Home Assistant → TC002 AWTRIX Bridge → Open Web UI.",
       "Anteprima aggiornata · non modifica il display": "Preview updated · does not change the display",
       "Anteprima non disponibile: {error}": "Preview unavailable: {error}",
@@ -1639,6 +1667,7 @@
       "Ora": "Time",
       "Data": "Date",
       "Musica Sonos": "Sonos music",
+      "Posizione Vale": "Vale location",
       "Umidita'": "Humidity",
       "Energia oggi": "Energy today",
       "Potenza": "Power",
@@ -1726,6 +1755,8 @@
       Date: "Data",
       MusicaSonos: "Musica Sonos",
       CasaViva: "Casa Viva",
+      PesoVittoria: "Peso Vittoria",
+      ValePosition: "Posizione Vale",
       sensor_awtrix_co2: "CO₂",
       sensor_awtrix_pm2_5: "PM2.5",
       sensor_awtrix_umidita: "Umidita'",
@@ -2133,6 +2164,11 @@
         showRainWhenDry: $("studioShowRainWhenDry").checked,
         compactLayout: $("studioCompactLayout").checked && ["weather", "calendar", "todo"].includes($("studioSourceType").value),
         chartColor: $("studioChartColor").value.toUpperCase(),
+        birthdays: $("studioSourceType").value === "birthday" ? [...$("studioBirthdayList").querySelectorAll(".birthday-row")].map(row => ({
+          name: row.querySelector(".birthday-name").value.trim(),
+          date: row.querySelector(".birthday-date").value,
+          message: row.querySelector(".birthday-message").value.trim(),
+        })) : [],
       };
     }
 
@@ -2140,7 +2176,7 @@
       ["static", "Testo", "Messaggio fisso"], ["entity", "Sensore", "Valore Home Assistant"],
       ["countdown", "Countdown", "Tempo rimanente"], ["weather", "Meteo", "Condizioni attuali"],
       ["rain", "Pioggia", "Timeline oraria"], ["calendar", "Calendario", "Prossimi eventi"],
-      ["todo", "Todo", "Cose da fare"],
+      ["todo", "Todo", "Cose da fare"], ["birthday", "Compleanni", "Messaggi nel giorno speciale"],
     ];
     function buildStudioSourceGallery() {
       const gallery = $("studioSourceGallery");
@@ -2238,6 +2274,7 @@
 
     function showStudioSourceFields() {
       const type = $("studioSourceType").value;
+      if (type === "birthday" && !$("studioBirthdayList").children.length) addStudioBirthday();
       const compact = ["weather", "calendar", "todo"].includes(type) && $("studioCompactLayout").checked;
       document.querySelectorAll("[data-studio-source]").forEach(button => {
         button.setAttribute("aria-pressed", String(button.dataset.studioSource === type));
@@ -2252,11 +2289,13 @@
       $("studioWeatherFields").hidden = type !== "weather";
       $("studioRainFields").hidden = type !== "rain";
       $("studioListFields").hidden = !["calendar", "todo"].includes(type);
+      $("studioBirthdayFields").hidden = type !== "birthday";
       $("studioCompactField").hidden = !["weather", "calendar", "todo"].includes(type);
       if (["weather", "calendar", "todo"].includes(type) && $("studioCompactLayout").checked) $("studioDisplayTemplate").value = "inherit";
       syncTemplatePicker();
       $("studioEntityId").required = needsEntity;
       $("studioTargetDateTime").required = type === "countdown";
+      $("studioBirthdayList").querySelectorAll(".birthday-name, .birthday-date").forEach(input => { input.required = type === "birthday"; });
       const entityOnly = type === "entity";
       const list = ["calendar", "todo"].includes(type);
       for (const id of ["studioAttribute", "studioSuffix", "studioSample", "studioUseEntityUnit"]) $(id).closest(".field, .switch-row").hidden = !entityOnly;
@@ -2267,6 +2306,63 @@
       $("studioEffects").hidden = type === "rain";
       loadStudioEntities(type);
       scheduleStudioPreview();
+    }
+
+    function addStudioBirthday(entry = {name: "", date: "", message: ""}) {
+      const list = $("studioBirthdayList");
+      if (list.children.length >= 100) { showToast(t("Massimo 100 compleanni"), true); return; }
+      const row = document.createElement("div");
+      row.className = "birthday-row three-fields";
+      const fields = [["birthday-name", "Nome", "text", 48], ["birthday-date", "Data (MM-GG)", "text", 5], ["birthday-message", "Messaggio", "text", 160]];
+      fields.forEach(([className, label, type, length]) => {
+        const wrapper = document.createElement("label"); wrapper.className = "field"; wrapper.textContent = t(label);
+        const input = document.createElement("input"); input.className = className; input.type = type; input.maxLength = length;
+        input.value = entry[className === "birthday-name" ? "name" : className === "birthday-date" ? "date" : "message"] || "";
+        input.required = $("studioSourceType").value === "birthday" && className !== "birthday-message";
+        if (className === "birthday-message") input.placeholder = t("Buon compleanno {name}!");
+        wrapper.append(input); row.append(wrapper);
+      });
+      const remove = document.createElement("button"); remove.type = "button"; remove.className = "mini delete"; remove.textContent = "×";
+      remove.setAttribute("aria-label", t("Rimuovi compleanno"));
+      remove.addEventListener("click", () => { row.remove(); state.studioDirty = true; scheduleStudioPreview(); });
+      row.append(remove); list.append(row);
+      state.studioDirty = true; scheduleStudioPreview();
+    }
+
+    function parseBirthdayCsv(text) {
+      const rows = []; let row = [], cell = "", quoted = false;
+      for (let index = 0; index < text.length; index++) {
+        const char = text[index];
+        if (quoted && char === '"' && text[index + 1] === '"') { cell += '"'; index++; }
+        else if (char === '"') quoted = !quoted;
+        else if (char === "," && !quoted) { row.push(cell); cell = ""; }
+        else if ((char === "\n" || char === "\r") && !quoted) {
+          if (char === "\r" && text[index + 1] === "\n") index++;
+          row.push(cell); if (row.some(value => value.trim())) rows.push(row); row = []; cell = "";
+        } else cell += char;
+      }
+      if (quoted) throw new Error(t("CSV non valido: virgolette non chiuse"));
+      row.push(cell); if (row.some(value => value.trim())) rows.push(row);
+      const header = rows.shift()?.map(value => value.trim().replace(/^\uFEFF/, "").toLowerCase());
+      if (!header || header.join(",") !== "name,date,message") throw new Error(t("Usa le colonne name,date,message"));
+      return rows.map((values, index) => {
+        if (values.length !== 3) throw new Error(t("Riga CSV {line} non valida", {line: index + 2}));
+        const [name, dateValue, message] = values.map(value => value.trim());
+        const date = /^\d{4}-\d{2}-\d{2}$/.test(dateValue) ? dateValue.slice(5) : dateValue;
+        if (!name || !/^\d{2}-\d{2}$/.test(date) || name.length > 48 || message.length > 160) throw new Error(t("Riga CSV {line} non valida", {line: index + 2}));
+        return {name, date, message};
+      });
+    }
+
+    async function uploadStudioBirthdays(event) {
+      const file = event.target.files?.[0]; if (!file) return;
+      try {
+        if (file.size > 65536) throw new Error(t("CSV troppo grande"));
+        const entries = parseBirthdayCsv(await file.text());
+        if (!entries.length || entries.length + $("studioBirthdayList").children.length > 100) throw new Error(t("Il CSV deve contenere da 1 a 100 compleanni"));
+        entries.forEach(addStudioBirthday); showToast(t("{count} compleanni aggiunti", {count: entries.length}));
+      } catch (error) { showToast(error.message, true); }
+      finally { event.target.value = ""; }
     }
 
     function setStudioAccess(allowed, message, error = false) {
@@ -2299,6 +2395,7 @@
       $("studioName").readOnly = false;
       $("studioName").value = "";
       $("studioSourceType").value = "static";
+      $("studioBirthdayList").replaceChildren();
       $("studioStaticText").value = t("Ciao!");
       const target = new Date(Date.now() + 7 * 86400000);
       $("studioTargetDateTime").value = formatStudioDateTime(target);
@@ -2366,6 +2463,9 @@
       $("studioName").value = app.name;
       $("studioName").readOnly = true;
       $("studioSourceType").value = app.sourceType;
+      $("studioBirthdayList").replaceChildren();
+      (app.birthdays || []).forEach(addStudioBirthday);
+      state.studioDirty = false;
       $("studioDisplayTemplate").value = app.displayTemplate || "inherit";
       $("studioDisplayTitle").value = app.displayTitle || "";
       $("studioStaticText").value = app.staticText;
@@ -2467,6 +2567,7 @@
           rain: `${t("pioggia")} · ${app.entityId}`,
           calendar: `${t("calendario")} · ${app.entityId}`,
           todo: `todo · ${app.entityId}`,
+          birthday: `${t("Compleanni")} · ${(app.birthdays || []).length}`,
         };
         const source = sourceLabels[app.sourceType] || app.sourceType;
         const value = app.lastValue || (app.sourceType === "static" ? app.staticText : t("in attesa"));
@@ -2542,7 +2643,7 @@
         }
         const message = document.homeAssistantAvailable
           ? "Connesso a Home Assistant: sensori e countdown ogni 2 secondi; meteo, pioggia e liste ogni minuto."
-          : "Le app statiche funzionano; l’API Home Assistant non è disponibile per quelle dinamiche.";
+          : "Le app statiche e i compleanni funzionano; l’API Home Assistant non è disponibile per le altre sorgenti dinamiche.";
         setStudioAccess(true, message, !document.homeAssistantAvailable);
         renderStudioList();
       } catch (error) {
@@ -3115,6 +3216,8 @@
     $("moodlightForm").addEventListener("submit", applyMoodlight);
     $("indicatorsForm").addEventListener("submit", applyIndicators);
     $("studioSourceType").addEventListener("change", showStudioSourceFields);
+    $("studioBirthdayAdd").addEventListener("click", () => addStudioBirthday());
+    $("studioBirthdayUpload").addEventListener("change", uploadStudioBirthdays);
     document.querySelectorAll("[data-studio-preset]").forEach(button => button.addEventListener("click", () => applyStudioPreset(button.dataset.studioPreset)));
     $("studioOrder").addEventListener("click", () => { selectWorkspaceTab("screens"); $("panel-screens").scrollIntoView({behavior: "smooth", block: "start"}); });
     $("studioEntityId").addEventListener("input", () => {

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.33
+
+- Add a Birthday source to App Studio. Enter people and personalized messages
+  manually or import a local UTF-8 CSV with `name,date,message` columns.
+- Store birthday lists only in the add-on's private app state; show a birthday
+  page only on matching days in the bridge time zone. Rotate multiple messages
+  on the same day once per minute. February 29 matches only in leap years.
+
 ## 0.2.32
 
 - Improve App Studio in Home Assistant's narrower viewport: put the library

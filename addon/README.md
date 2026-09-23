@@ -6,7 +6,7 @@ behavior, security and installation guide is in the repository `docs` folder.
 
 Open **Web UI** from the add-on page for the live 52x16 preview, carousel
 controls and App Studio. App Studio creates persistent static, sensor,
-countdown, weather, rain-chart, calendar and Todo pages with advanced colours,
+countdown, weather, rain-chart, calendar, Todo and birthday pages with advanced colours,
 thresholds, effects, lifetime and visibility controls without editing YAML.
 Each app can use the global layout, an adaptive large reading, or a fixed title
 above its value; the three choices have live 52x16 previews before saving.
@@ -21,6 +21,17 @@ The **Modalità Sonos** section configures a Home Assistant media player,
 playlist URI, volume step and long-press threshold. With the native companion,
 the knob and rocker become play/pause, next/previous and Sonos volume controls
 while a dedicated now-playing screen pauses the normal carousel.
+
+## 0.2.33
+
+App Studio includes a Birthday source. Add people and personalized messages
+manually or upload a local UTF-8 CSV with the header `name,date,message` and
+dates in `MM-DD` or `YYYY-MM-DD` form. Only month and day are stored, and
+`{name}` inserts each person's name in the message. The app enters the carousel
+only on a matching date in the bridge time zone; multiple matching messages
+rotate once per minute. February 29 appears only in leap years. Lists live in
+the add-on's private state, never in this repository. A Studio JSON export
+*does* include the birthday list, so keep exports private.
 
 ## 0.2.32
 

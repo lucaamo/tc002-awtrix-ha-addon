@@ -7,7 +7,7 @@ import logging
 import os
 import re
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
@@ -121,6 +121,7 @@ STUDIO_KEYS = {
     "chartColor",
     "showRainWhenDry",
     "compactLayout",
+    "birthdays",
 }
 
 DEFAULT_DEFINITION: dict[str, Any] = {
@@ -183,6 +184,7 @@ DEFAULT_DEFINITION: dict[str, Any] = {
     "showRainWhenDry": True,
     "compactLayout": False,
     "chartColor": "#4DB8FF",
+    "birthdays": [],
 }
 
 EntityFetcher = Callable[[str], Awaitable[dict[str, Any]]]
@@ -224,7 +226,7 @@ def validate_definition(payload: Any, *, expected_name: str | None = None) -> di
     if expected_name is not None and name != expected_name:
         raise validation("An existing Studio app cannot be renamed", "name")
 
-    source_types = {"static", "entity", "countdown", "weather", "rain", "calendar", "todo"}
+    source_types = {"static", "entity", "countdown", "weather", "rain", "calendar", "todo", "birthday"}
     if candidate["sourceType"] not in source_types:
         raise validation("Unknown Studio app type", "sourceType")
     if candidate["displayTemplate"] not in DISPLAY_TEMPLATES:
@@ -322,6 +324,30 @@ def validate_definition(payload: Any, *, expected_name: str | None = None) -> di
             datetime.fromisoformat(candidate["targetDateTime"])
         except ValueError as error:
             raise validation("Use an ISO date and time", "targetDateTime") from error
+    birthdays = candidate["birthdays"]
+    if not isinstance(birthdays, list) or len(birthdays) > 100:
+        raise validation("Enter at most 100 birthdays", "birthdays")
+    if candidate["sourceType"] == "birthday" and not birthdays:
+        raise validation("Enter at least one birthday", "birthdays")
+    validated_birthdays = []
+    for index, entry in enumerate(birthdays):
+        field = f"birthdays.{index}"
+        if not isinstance(entry, dict) or set(entry) != {"name", "date", "message"}:
+            raise validation("Birthday must contain name, date and message", field)
+        person = _text(entry["name"], f"{field}.name", 48).strip()
+        birthday_date = _text(entry["date"], f"{field}.date", 5)
+        message = _text(entry["message"], f"{field}.message", 160).strip()
+        if not person or any(ord(char) < 32 for char in person + message):
+            raise validation("Enter a single-line name and message", field)
+        try:
+            if not re.fullmatch(r"\d{2}-\d{2}", birthday_date):
+                raise ValueError("Invalid date format")
+            date_value = birthday_date.split("-")
+            date(2000, int(date_value[0]), int(date_value[1]))
+        except ValueError as error:
+            raise validation("Use MM-DD for the birthday", f"{field}.date") from error
+        validated_birthdays.append({"name": person, "date": birthday_date, "message": message})
+    candidate["birthdays"] = validated_birthdays if candidate["sourceType"] == "birthday" else []
     for field in (
         "textColor",
         "backgroundColor",
@@ -366,7 +392,8 @@ class StudioManager:
                     "lastError": None,
                     "visible": True,
                 }
-                self._publish(definition, None)
+                if definition["sourceType"] != "birthday":
+                    self._publish(definition, None)
                 self._set_enabled(name, definition["enabled"])
 
     @property
@@ -687,6 +714,16 @@ class StudioManager:
         if source_type == "countdown":
             text = self._countdown_text(definition)
             return self._spec(definition, text, text_override=text), text
+        if source_type == "birthday":
+            now = datetime.now(ZoneInfo(self.engine.config.timezone))
+            today = now.strftime("%m-%d")
+            matching = [entry for entry in definition["birthdays"] if entry["date"] == today]
+            if not matching:
+                raise unavailable("No birthday today")
+            entry = matching[(now.hour * 60 + now.minute) % len(matching)]
+            message = entry["message"] or "Buon compleanno {name}!"
+            text = message.replace("{name}", entry["name"])
+            return self._spec(definition, text, text_override=text), text
 
         entity = await self._fetch_entity(definition["entityId"])
         state = str(entity.get("state") or "")
@@ -850,6 +887,10 @@ class StudioManager:
                 runtime.update({"lastError": None, "visible": False, "visibilityReason": "dryForecast"})
                 self._hide(name)
                 return
+            if error.message == "No birthday today":
+                runtime.update({"lastError": None, "visible": False, "visibilityReason": "noBirthdayToday"})
+                self._hide(name)
+                return
             runtime.update({"lastError": error.message, "visible": not definition["hideUnavailable"], "visibilityReason": "unavailable"})
             if definition["hideUnavailable"]:
                 self._hide(name)
@@ -891,7 +932,7 @@ class StudioManager:
         if definition["sourceType"] == "static":
             self._publish(definition, None)
             self.runtime[name]["lastValue"] = definition["staticText"]
-        else:
+        elif definition["sourceType"] != "birthday":
             self._publish(definition, None)
         self._set_enabled(name, definition["enabled"])
         self._save()
@@ -946,7 +987,8 @@ class StudioManager:
         self._hide(old_name)
         self.definitions[new_name] = definition
         self.runtime[new_name] = runtime
-        self._publish(definition, None)
+        if definition["sourceType"] != "birthday":
+            self._publish(definition, None)
         self.engine.set_app_order({"order": order, "disabled": sorted(disabled)})
         self._save()
         if definition["sourceType"] != "static":
@@ -1080,6 +1122,10 @@ class StudioManager:
                     sample_value,
                     text_override=f"{definition['prefix']}Esempio · Secondo elemento",
                 )
+        elif definition["sourceType"] == "birthday":
+            entry = definition["birthdays"][0]
+            message = entry["message"] or "Buon compleanno {name}!"
+            spec = self._spec(definition, entry["name"], text_override=message.replace("{name}", entry["name"]))
         else:
             spec = self._spec(definition, sample_value, unit)
         return self._render_preview_spec(definition["name"], spec)
