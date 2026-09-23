@@ -11,6 +11,7 @@ from .validation import parse_color
 
 RAIN_THRESHOLD_MM = 0.1
 MAX_HOURS = 10
+VISIBILITY_HOURS = 12
 
 
 def _number(value: Any, maximum: float) -> float:
@@ -32,6 +33,24 @@ def _hours_until(item: dict[str, Any], index: int, now: datetime) -> int:
         except ValueError:
             pass
     return index + 1
+
+
+def rain_expected_in_12_hours(forecasts: list[Any], *, unit: str = "mm") -> bool:
+    """Keep the page visible unless twelve usable hourly forecasts are dry."""
+
+    entries = forecasts[:VISIBILITY_HOURS]
+    if len(entries) < VISIBILITY_HOURS or any(
+        not isinstance(item, dict)
+        or (item.get("precipitation") is None and item.get("precipitation_probability") is None)
+        for item in entries
+    ):
+        return True
+    factor = 25.4 if unit.lower() in {"in", "inch", "inches"} else 1.0
+    return any(
+        _number(item.get("precipitation"), 50.0) * factor >= RAIN_THRESHOLD_MM
+        or _number(item.get("precipitation_probability"), 100.0) >= 50
+        for item in entries
+    )
 
 
 def rain_timeline(

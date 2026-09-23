@@ -22,6 +22,13 @@ playlist URI, volume step and long-press threshold. With the native companion,
 the knob and rocker become play/pause, next/previous and Sonos volume controls
 while a dedicated now-playing screen pauses the normal carousel.
 
+## 0.2.30
+
+The Rain app can optionally leave the carousel when all twelve upcoming hourly
+forecasts are dry. It returns automatically when rain is expected; incomplete
+forecasts leave it visible. Existing Rain apps keep showing until this switch is
+turned off in App Studio.
+
 ## 0.2.29
 
 Rain forecasts now use a dedicated 52×16 timeline with an arrival-time

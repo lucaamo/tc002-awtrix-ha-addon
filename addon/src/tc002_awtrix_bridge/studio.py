@@ -16,7 +16,7 @@ import aiohttp
 
 from .engine import Engine
 from .errors import BridgeError, not_found, unavailable, validation
-from .rain_display import rain_timeline
+from .rain_display import rain_expected_in_12_hours, rain_timeline
 from .validation import DISPLAY_TEMPLATES, parse_color, validate_app_name, validate_pushed_payload
 
 LOGGER = logging.getLogger(__name__)
@@ -119,6 +119,7 @@ STUDIO_KEYS = {
     "chartType",
     "chartAutoscale",
     "chartColor",
+    "showRainWhenDry",
 }
 
 DEFAULT_DEFINITION: dict[str, Any] = {
@@ -178,6 +179,7 @@ DEFAULT_DEFINITION: dict[str, Any] = {
     "showEmpty": True,
     "chartType": "barChart",
     "chartAutoscale": True,
+    "showRainWhenDry": True,
     "chartColor": "#4DB8FF",
 }
 
@@ -285,6 +287,7 @@ def validate_definition(payload: Any, *, expected_name: str | None = None) -> di
         "dynamicWeatherIcon",
         "showEmpty",
         "chartAutoscale",
+        "showRainWhenDry",
     ):
         candidate[field] = _boolean(candidate[field], field)
 
@@ -698,12 +701,17 @@ class StudioManager:
             forecasts = response.get("forecast", [])
             if not isinstance(forecasts, list) or not forecasts:
                 raise unavailable("Hourly rain forecast is unavailable")
+            unit = str(attributes.get("precipitation_unit") or "mm")
+            if not definition["showRainWhenDry"] and not rain_expected_in_12_hours(
+                forecasts, unit=unit
+            ):
+                raise unavailable("No rain forecast in the next 12 hours")
             draw, values, _ = rain_timeline(
                 forecasts,
                 chart_type=definition["chartType"],
                 autoscale=definition["chartAutoscale"],
                 chart_color=definition["chartColor"],
-                unit=str(attributes.get("precipitation_unit") or "mm"),
+                unit=unit,
             )
             if not values:
                 raise unavailable("Hourly rain forecast has no usable entries")
@@ -793,6 +801,10 @@ class StudioManager:
             )
         except BridgeError as error:
             if self.definitions.get(name) is not definition:
+                return
+            if error.message == "No rain forecast in the next 12 hours":
+                runtime.update({"lastError": None, "visible": False})
+                self._hide(name)
                 return
             runtime.update({"lastError": error.message, "visible": not definition["hideUnavailable"]})
             if definition["hideUnavailable"]:

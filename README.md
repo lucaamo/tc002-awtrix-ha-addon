@@ -19,7 +19,8 @@ Do not uninstall or disable it until its options and `/data` content have been
 copied to the repository-installed app and the new app has passed a live check.
 The two apps cannot run together on the same TCP/UDP ports and MQTT identity.
 
-Release 0.2.29 adds a 52×16 rain forecast timeline and an update changelog.
+Release 0.2.30 adds an optional twelve-hour dry forecast visibility switch to
+the 52×16 rain page. Source change: private development commit `60e0649`.
 It is based on development commit `ee5763d`.
 
 The repository also includes a one-time importer for existing local installations.

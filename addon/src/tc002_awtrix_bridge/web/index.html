@@ -655,6 +655,7 @@
 
             <div class="rain-fields" id="studioRainFields" hidden>
               <p class="field-help">Dieci ore in 52×16 pixel: l’ora d’arrivo è in alto, le quantità sono sotto. Il rosa segnala pioggia intensa; l’ambra indica probabilità senza quantità prevista. L’anteprima usa dati di esempio.</p>
+              <div class="switch-row"><div><div class="label">Mostra anche senza pioggia nelle prossime 12 ore</div><small>Se disattivato, Pioggia esce dal carosello quando tutte le 12 previsioni orarie sono asciutte. Rientra automaticamente se è prevista pioggia. Con dati incompleti rimane visibile.</small></div><label class="switch"><input id="studioShowRainWhenDry" type="checkbox" checked><span></span></label></div>
               <div class="three-fields">
                 <div class="field"><label for="studioChartType">Grafico</label><select id="studioChartType"><option value="barChart">Barre</option><option value="lineChart">Linea</option></select></div>
                 <div class="field"><label for="studioChartColor">Colore grafico</label><input id="studioChartColor" type="color" value="#4db8ff"></div>
@@ -1535,6 +1536,8 @@
       "{label}: {frames} fotogrammi, {width}×{height}": "{label}: {frames} frames, {width}×{height}",
       "Le previsioni di pioggia usano una timeline 52×16 dedicata.": "Rain forecasts use a dedicated 52×16 timeline.",
       "Dieci ore in 52×16 pixel: l’ora d’arrivo è in alto, le quantità sono sotto. Il rosa segnala pioggia intensa; l’ambra indica probabilità senza quantità prevista. L’anteprima usa dati di esempio.": "Ten hours in 52×16 pixels: arrival time above, amounts below. Pink marks heavy rain; amber marks rain probability without a forecast amount. The preview uses sample data.",
+      "Mostra anche senza pioggia nelle prossime 12 ore": "Show even without rain in the next 12 hours",
+      "Se disattivato, Pioggia esce dal carosello quando tutte le 12 previsioni orarie sono asciutte. Rientra automaticamente se è prevista pioggia. Con dati incompleti rimane visibile.": "When off, Rain leaves the carousel if all 12 hourly forecasts are dry. It returns automatically when rain is forecast. It stays visible if forecast data is incomplete.",
       "Il titolo resta fermo in alto e soltanto il valore scorre quando serve.": "The title remains fixed at the top and only the value scrolls when needed.",
       "Il layout a due righe è disponibile con AWTRIX fedele 1×, Silkscreen e Scientifica minuscolo.": "The two-line layout is available with AWTRIX faithful 1×, Silkscreen and lowercase Scientifica.",
       "Ciao!": "Hello!",
@@ -2034,6 +2037,7 @@
         showEmpty: $("studioShowEmpty").checked,
         chartType: $("studioChartType").value,
         chartAutoscale: $("studioChartAutoscale").checked,
+        showRainWhenDry: $("studioShowRainWhenDry").checked,
         chartColor: $("studioChartColor").value.toUpperCase(),
       };
     }
@@ -2122,6 +2126,7 @@
       $("studioShowEmpty").checked = true;
       $("studioChartType").value = "barChart";
       $("studioChartAutoscale").checked = true;
+      $("studioShowRainWhenDry").checked = true;
       $("studioChartColor").value = "#4db8ff";
       showStudioSourceFields();
       renderStudioList();
@@ -2190,6 +2195,7 @@
       $("studioShowEmpty").checked = app.showEmpty;
       $("studioChartType").value = app.chartType;
       $("studioChartAutoscale").checked = app.chartAutoscale;
+      $("studioShowRainWhenDry").checked = app.showRainWhenDry !== false;
       $("studioChartColor").value = app.chartColor.toLowerCase();
       showStudioSourceFields();
       renderStudioList();
