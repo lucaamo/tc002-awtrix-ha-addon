@@ -1,0 +1,2937 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <base href="./">
+  <title>TC002 Bridge</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b1118'/%3E%3Cpath d='M7 10h4v4H7zm7 0h4v4h-4zm7 0h4v4h-4zM7 17h4v4H7zm7 0h4v4h-4zm7 0h4v4h-4z' fill='%2338e6c5'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #080c12;
+      --surface: #101720;
+      --surface-2: #151e29;
+      --surface-3: #1b2633;
+      --border: #273342;
+      --text: #f1f5f9;
+      --muted: #8fa0b3;
+      --accent: #38e6c5;
+      --accent-2: #16bfa4;
+      --blue: #5bbcff;
+      --warning: #ffc857;
+      --danger: #ff6b7a;
+      --ok: #51e08a;
+      --radius: 18px;
+      --shadow: 0 18px 45px rgb(0 0 0 / 28%);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 88% -10%, rgb(56 230 197 / 14%), transparent 30rem),
+        radial-gradient(circle at -8% 24%, rgb(91 188 255 / 9%), transparent 26rem),
+        var(--bg);
+      font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, input, select { font: inherit; }
+
+    button, select, input[type="color"] { cursor: pointer; }
+
+    button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .topbar {
+      position: sticky;
+      z-index: 10;
+      top: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 68px;
+      padding: 12px max(18px, calc((100vw - 1180px) / 2));
+      border-bottom: 1px solid rgb(255 255 255 / 6%);
+      background: rgb(8 12 18 / 82%);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+    .brand-mark {
+      display: grid;
+      grid-template-columns: repeat(3, 5px);
+      gap: 3px;
+      padding: 10px;
+      border: 1px solid rgb(56 230 197 / 25%);
+      border-radius: 12px;
+      background: rgb(56 230 197 / 8%);
+      box-shadow: inset 0 0 22px rgb(56 230 197 / 5%);
+    }
+
+    .brand-mark i { width: 5px; height: 5px; border-radius: 1px; background: var(--accent); }
+    .brand-mark i:nth-child(2), .brand-mark i:nth-child(4), .brand-mark i:nth-child(9) { opacity: .25; }
+    .brand-title { min-width: 0; }
+    .brand-title strong { display: block; font-size: 17px; letter-spacing: -.02em; }
+    .brand-title span { display: block; color: var(--muted); font-size: 12px; }
+
+    .top-actions { display: flex; align-items: center; gap: 9px; }
+    .language-select {
+      min-height: 34px;
+      padding: 5px 25px 5px 9px;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--surface);
+      font-size: 12px;
+      font-weight: 750;
+    }
+    .top-link {
+      padding: 7px 11px;
+      color: var(--accent);
+      border: 1px solid rgb(56 230 197 / 22%);
+      border-radius: 999px;
+      background: rgb(56 230 197 / 7%);
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .live-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      white-space: nowrap;
+    }
+
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 0 3px rgb(143 160 179 / 12%); }
+    .dot.ok { background: var(--ok); box-shadow: 0 0 0 3px rgb(81 224 138 / 12%), 0 0 10px rgb(81 224 138 / 55%); }
+    .dot.warn { background: var(--warning); box-shadow: 0 0 0 3px rgb(255 200 87 / 12%); }
+    .dot.bad { background: var(--danger); box-shadow: 0 0 0 3px rgb(255 107 122 / 12%); }
+
+    main { width: min(1180px, calc(100% - 30px)); margin: 24px auto 52px; }
+    .grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(300px, .8fr); gap: 18px; }
+    .lower-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 1.18fr); gap: 18px; margin-top: 18px; align-items: start; }
+
+    .card {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: linear-gradient(145deg, rgb(21 30 41 / 92%), rgb(13 19 27 / 95%));
+      box-shadow: var(--shadow);
+    }
+
+    .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 20px 22px 0; }
+    .card-head h1, .card-head h2 { margin: 0; letter-spacing: -.025em; }
+    .card-head h1 { font-size: clamp(21px, 3vw, 30px); }
+    .card-head h2 { font-size: 19px; }
+    .eyebrow { margin: 0 0 4px; color: var(--accent); font-size: 11px; font-weight: 750; letter-spacing: .13em; text-transform: uppercase; }
+    .subtle { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+
+    .preview-wrap { padding: 21px 22px 12px; }
+    .clock-shell {
+      position: relative;
+      padding: clamp(15px, 3.4vw, 27px);
+      border: 1px solid #313d4b;
+      border-radius: 20px;
+      background: linear-gradient(145deg, #303640, #0e1218 23%, #05070a 70%, #1b222b);
+      box-shadow: inset 0 0 0 3px #090c10, inset 0 0 36px rgb(0 0 0 / 90%), 0 16px 30px rgb(0 0 0 / 35%);
+    }
+    .clock-shell::before {
+      content: "";
+      position: absolute;
+      top: -7px;
+      left: 19%;
+      width: 48px;
+      height: 8px;
+      border-radius: 8px 8px 2px 2px;
+      background: linear-gradient(90deg, #ed3f2d, #ff7356);
+      box-shadow: 0 1px 5px #000;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      aspect-ratio: 52 / 16;
+      border-radius: 4px;
+      background: #000;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    .now-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 22px 20px; }
+    .now-app { min-width: 0; }
+    .now-app span { display: block; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    .now-app strong { display: block; overflow: hidden; margin-top: 2px; font-size: 17px; text-overflow: ellipsis; white-space: nowrap; }
+    .nav-actions { display: flex; gap: 8px; }
+
+    .btn {
+      min-height: 38px;
+      padding: 8px 13px;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: var(--surface-2);
+      transition: border-color .15s, background .15s, transform .15s;
+    }
+    .btn:hover { border-color: #3a4c60; background: var(--surface-3); }
+    .btn:active { transform: translateY(1px); }
+    .btn.primary { color: #032b24; border-color: var(--accent); background: var(--accent); font-weight: 750; }
+    .btn.primary:hover { background: #69f0d7; }
+    .btn.icon { display: grid; place-items: center; width: 39px; padding: 0; font-size: 18px; }
+    .btn:disabled { cursor: not-allowed; opacity: .42; }
+
+    .status-card { padding-bottom: 12px; }
+    .status-list { display: grid; gap: 2px; padding: 16px 14px 10px; }
+    .status-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 54px; padding: 10px 9px; border-bottom: 1px solid rgb(255 255 255 / 5%); }
+    .status-item:last-child { border-bottom: 0; }
+    .status-name { display: flex; align-items: center; gap: 10px; color: var(--muted); }
+    .status-value { max-width: 58%; overflow: hidden; font-weight: 650; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+    .status-value small { color: var(--muted); font-weight: 500; }
+    .status-note { margin: 0 22px 8px; padding: 12px 13px; color: #bed0df; border: 1px solid rgb(91 188 255 / 16%); border-radius: 12px; background: rgb(91 188 255 / 7%); font-size: 12px; }
+
+    .form-body { display: grid; gap: 18px; padding: 21px 22px 22px; }
+    .field { display: grid; gap: 8px; }
+    .field-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+    label, .label { color: #cad5df; font-size: 13px; font-weight: 650; }
+    .value-badge { min-width: 58px; padding: 3px 7px; color: var(--accent); border-radius: 7px; background: rgb(56 230 197 / 8%); font: 650 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; }
+
+    input[type="range"] { width: 100%; height: 5px; accent-color: var(--accent); }
+    input[type="number"], input[type="text"], select, textarea {
+      width: 100%;
+      min-height: 41px;
+      padding: 8px 11px;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #0d141d;
+    }
+    input::placeholder, textarea::placeholder { color: #53677c; }
+    input:disabled, select:disabled, textarea:disabled { cursor: not-allowed; opacity: .48; }
+    input[type="color"] { width: 44px; height: 34px; padding: 3px; border: 1px solid var(--border); border-radius: 9px; background: #0d141d; }
+    .two-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+
+    .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 38px; }
+    .switch { position: relative; flex: 0 0 auto; width: 43px; height: 24px; }
+    .switch input { position: absolute; opacity: 0; pointer-events: none; }
+    .switch span { position: absolute; inset: 0; border-radius: 99px; background: #334152; transition: .2s; }
+    .switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 2px 5px #0006; transition: .2s; }
+    .switch input:checked + span { background: var(--accent-2); }
+    .switch input:checked + span::after { transform: translateX(19px); }
+    .switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .form-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding-top: 3px; }
+
+    .apps-body { padding: 13px 12px 14px; }
+    .apps-list { display: grid; gap: 6px; }
+    .app-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 11px; min-height: 55px; padding: 8px 9px; border: 1px solid transparent; border-radius: 12px; transition: background .15s, border-color .15s; }
+    .app-row:hover { background: rgb(255 255 255 / 3%); }
+    .app-row.current { border-color: rgb(56 230 197 / 25%); background: rgb(56 230 197 / 6%); }
+    .app-row.absent { opacity: .56; }
+    .app-order { width: 25px; color: #607388; font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; }
+    .app-copy { min-width: 0; }
+    .app-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .app-copy small { display: block; overflow: hidden; margin-top: 1px; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+    .app-actions { display: flex; align-items: center; gap: 5px; }
+    .app-title-field { display: grid; gap: 5px; margin-top: 9px; }
+    .app-title-field span { font-size: 12px; color: var(--muted); }
+    .app-title-field input { width: 100%; min-width: 0; padding: 8px 10px; font-size: 14px; }
+    .mini { display: grid; place-items: center; width: 31px; height: 31px; padding: 0; color: var(--muted); border: 1px solid transparent; border-radius: 8px; background: transparent; }
+    .mini:hover { color: var(--text); border-color: var(--border); background: var(--surface-2); }
+    .mini.show { width: auto; padding: 0 9px; color: var(--accent); font-size: 12px; font-weight: 700; }
+    .mini.delete { color: var(--danger); font-size: 17px; }
+    .apps-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 9px 2px; border-top: 1px solid rgb(255 255 255 / 5%); margin-top: 8px; }
+    .apps-footer small { color: var(--muted); }
+
+    .studio-card { margin-top: 18px; scroll-margin-top: 82px; }
+    .studio-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, .75fr); gap: 1px; margin-top: 19px; border-top: 1px solid var(--border); background: var(--border); }
+    .studio-editor, .studio-library { min-width: 0; padding: 20px 22px 23px; background: linear-gradient(145deg, #111923, #0d141d); }
+    .studio-library { background: #0d141d; }
+    .studio-preview { margin-bottom: 20px; padding: 17px; border: 1px solid #263544; border-radius: 15px; background: #070a0f; }
+    .studio-preview .clock-shell { padding: clamp(12px, 2.5vw, 20px); border-radius: 15px; }
+    .studio-preview .clock-shell::before { width: 38px; height: 6px; }
+    .studio-preview-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
+    .studio-preview-head span { color: var(--muted); font-size: 12px; }
+    .studio-preview-head strong { font-size: 13px; }
+    .studio-form { display: grid; gap: 16px; }
+    .three-fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 13px; }
+    .entity-fields[hidden], .static-fields[hidden] { display: none; }
+    .color-field { display: flex; align-items: center; min-height: 41px; padding: 3px 7px 3px 10px; border: 1px solid var(--border); border-radius: 10px; background: #0d141d; }
+    .color-field output { flex: 1; color: var(--muted); font: 600 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .studio-tip { padding: 11px 13px; color: #c5d5e2; border: 1px solid rgb(56 230 197 / 15%); border-radius: 11px; background: rgb(56 230 197 / 6%); font-size: 12px; }
+    .studio-tip.error { color: #ffd4d9; border-color: rgb(255 107 122 / 23%); background: rgb(255 107 122 / 7%); }
+    .studio-library-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .studio-library-head h3 { margin: 0; font-size: 15px; }
+    .studio-list { display: grid; gap: 8px; }
+    .studio-item { padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+    .studio-item.active { border-color: rgb(56 230 197 / 28%); background: rgb(56 230 197 / 5%); }
+    .studio-item-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 9px; }
+    .studio-item-copy { min-width: 0; }
+    .studio-item-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .studio-item-copy small { display: block; overflow: hidden; margin-top: 3px; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+    .studio-badge { flex: 0 0 auto; padding: 3px 7px; color: var(--blue); border-radius: 7px; background: rgb(91 188 255 / 8%); font-size: 10px; font-weight: 750; letter-spacing: .05em; text-transform: uppercase; }
+    .studio-badge.error { color: var(--danger); background: rgb(255 107 122 / 8%); }
+    .studio-item-actions { display: flex; gap: 5px; margin-top: 10px; }
+    .studio-item-actions .btn { min-height: 32px; padding: 5px 9px; font-size: 12px; }
+    .btn.danger { color: var(--danger); }
+    .icon-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+    .file-button { position: relative; overflow: hidden; }
+    .file-button input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    .lametric-import { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 11px; padding: 13px; border: 1px solid rgb(91 188 255 / 18%); border-radius: 12px; background: rgb(91 188 255 / 5%); }
+    .lametric-import .field { gap: 6px; }
+    .lametric-import-copy { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+    .lametric-import-copy strong { font-size: 13px; }
+    .lametric-import-copy a { color: var(--blue); font-size: 12px; text-decoration: none; }
+    .lametric-import-copy a:hover { text-decoration: underline; }
+    .lametric-actions { display: flex; gap: 8px; }
+    .lametric-actions .btn { white-space: nowrap; }
+    .lametric-help { grid-column: 1 / -1; margin: -2px 0 0; color: var(--muted); font-size: 11px; }
+    .studio-empty { padding: 24px 12px; color: var(--muted); text-align: center; }
+
+    details { margin-top: 18px; border: 1px solid var(--border); border-radius: 14px; background: rgb(16 23 32 / 72%); }
+    summary { padding: 14px 17px; color: #c9d5e0; cursor: pointer; font-weight: 650; }
+    .details-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; border-top: 1px solid var(--border); background: var(--border); }
+    .detail { min-width: 0; padding: 14px 16px; background: #0e151e; }
+    .detail span { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+    .detail strong { display: block; overflow: hidden; margin-top: 5px; font: 600 13px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; text-overflow: ellipsis; white-space: nowrap; }
+
+    .toast {
+      position: fixed;
+      z-index: 30;
+      right: 18px;
+      bottom: 18px;
+      max-width: min(390px, calc(100vw - 36px));
+      padding: 12px 15px;
+      color: #062720;
+      border-radius: 11px;
+      background: var(--accent);
+      box-shadow: 0 12px 35px #0009;
+      font-weight: 700;
+      opacity: 0;
+      transform: translateY(14px);
+      pointer-events: none;
+      transition: opacity .2s, transform .2s;
+    }
+    .toast.visible { opacity: 1; transform: none; }
+    .toast.error { color: #fff; background: var(--danger); }
+
+    .skeleton { position: relative; overflow: hidden; color: transparent !important; border-radius: 6px; background: #202b38; }
+    .skeleton::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgb(255 255 255 / 7%), transparent); animation: shimmer 1.3s infinite; }
+    @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+    @media (max-width: 860px) {
+      .grid, .lower-grid { grid-template-columns: 1fr; }
+      .studio-layout { grid-template-columns: 1fr; }
+      .status-list { grid-template-columns: 1fr 1fr; }
+      .status-item { display: block; }
+      .status-value { max-width: 100%; margin-top: 5px; text-align: left; }
+      .details-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 520px) {
+      main { width: min(100% - 20px, 1180px); margin-top: 12px; }
+      .topbar { min-height: 60px; padding: 10px 14px; }
+      .brand-title span, .live-pill span:last-child { display: none; }
+      .top-link span { display: none; }
+      .card-head, .preview-wrap, .form-body { padding-left: 16px; padding-right: 16px; }
+      .now-row { align-items: flex-end; padding-left: 16px; padding-right: 16px; }
+      .nav-actions { flex-wrap: wrap; justify-content: flex-end; }
+      .status-list { grid-template-columns: 1fr; }
+      .two-fields { grid-template-columns: 1fr; }
+      .three-fields { grid-template-columns: 1fr; }
+      .lametric-import { grid-template-columns: 1fr; align-items: stretch; }
+      .lametric-import-copy, .lametric-help { grid-column: 1; }
+      .lametric-actions { display: grid; grid-template-columns: 1fr 1fr; }
+      .details-grid { grid-template-columns: 1fr; }
+      .app-row { gap: 7px; padding-left: 4px; padding-right: 4px; }
+      .app-order { width: 19px; }
+      .mini.show { padding: 0 6px; }
+    }
+
+    /* Workspace navigation and per-app template chooser. */
+    [hidden] { display: none !important; }
+    .workspace-tabs { display: flex; gap: 6px; margin: 24px 0 18px; padding: 5px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow-x: auto; }
+    .workspace-tab { flex: 1; min-height: 44px; padding: 10px 16px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); white-space: nowrap; font-weight: 650; }
+    .workspace-tab[aria-selected="true"] { background: var(--surface-3); color: var(--accent); box-shadow: inset 0 -2px var(--accent); }
+    .workspace-panel > .card { margin-top: 18px; }
+    .workspace-panel > .card:first-child { margin-top: 0; }
+    .workspace-panel { scroll-margin-top: 90px; }
+    #panel-device { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 18px; align-items: start; }
+    #panel-device > .card { margin: 0; }
+    .settings-overview { grid-column: 1 / -1; }
+    .settings-intro { padding: 0 16px 16px; color: var(--muted); }
+    .settings-map { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; padding: 0 16px 16px; }
+    .settings-tile { border: 1px solid var(--border); border-radius: 12px; padding: 14px; min-width: 0; background: var(--surface); }
+    .settings-tile h3 { margin: 0 0 7px; font-size: 15px; }
+    .settings-tile p { margin: 0 0 9px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    .settings-tile strong { display: block; overflow-wrap: anywhere; font-size: 13px; }
+    .settings-tile a { display: inline-block; margin-top: 9px; font-size: 13px; }
+    .settings-tag { display: inline-block; margin-bottom: 9px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 20px; color: var(--muted); font-size: 11px; }
+    .settings-tag.available { color: var(--accent); border-color: var(--accent); }
+    @media (max-width: 1050px) { .settings-map { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+    #panel-screens .apps-list { max-height: 520px; overflow-y: auto; }
+    .template-picker { margin: 0; padding: 0; border: 0; min-width: 0; }
+    .template-picker legend { font-weight: 700; margin-bottom: 10px; }
+    .template-gallery { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+    .template-option { padding: 10px; text-align: left; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); color: var(--text); min-width: 0; }
+    .template-option[aria-pressed="true"] { border-color: var(--accent); background: rgb(56 230 197 / 7%); }
+    .template-option canvas { margin-bottom: 9px; border-radius: 3px; }
+    .template-option strong { display: block; font-size: 12px; }
+    .template-option small { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; }
+    .studio-preview { position: sticky; top: 82px; z-index: 2; }
+    .studio-preview-status { color: var(--muted); font-size: 12px; margin: 10px 0 0; }
+    @media (max-width: 850px) { #panel-device { grid-template-columns: 1fr; } }
+    @media (max-width: 600px) { .settings-map { grid-template-columns: 1fr; } }
+    @media (max-width: 540px) { .workspace-tab { padding: 10px; font-size: 13px; } .template-gallery { gap: 5px; } .template-option { padding: 7px; } .studio-preview { position: static; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+      <div class="brand-title">
+        <strong>TC002 Bridge</strong>
+        <span>Controllo rapido Home Assistant</span>
+      </div>
+    </div>
+    <div class="top-actions">
+      <a class="top-link" href="#studio">✦ <span>Crea app</span></a>
+      <select class="language-select" id="interfaceLanguage" title="Lingua interfaccia" aria-label="Lingua interfaccia">
+        <option value="it">IT</option>
+        <option value="en">EN</option>
+      </select>
+      <div class="live-pill" title="Stato del bridge">
+        <i class="dot" id="bridgeDot"></i>
+        <span id="bridgeStatus">Connessione…</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="grid">
+      <section class="card" aria-labelledby="previewTitle">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">Anteprima live · 52 × 16</p>
+            <h1 id="previewTitle">Pixel clock</h1>
+            <p class="subtle">La stessa immagine inviata al display.</p>
+          </div>
+        </div>
+        <div class="preview-wrap">
+          <div class="clock-shell">
+            <canvas id="screen" width="52" height="16" aria-label="Anteprima corrente del TC002"></canvas>
+          </div>
+        </div>
+        <div class="now-row">
+          <div class="now-app">
+            <span>In riproduzione</span>
+            <strong id="currentApp" class="skeleton">Caricamento</strong>
+          </div>
+          <div class="nav-actions">
+            <button class="btn icon" id="previousApp" title="Schermata precedente" aria-label="Schermata precedente">‹</button>
+            <button class="btn" id="republishApp" title="Mostra nuovamente la schermata corrente">Ripubblica</button>
+            <button class="btn icon" id="nextApp" title="Schermata successiva" aria-label="Schermata successiva">›</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card status-card" aria-labelledby="statusTitle">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">A colpo d’occhio</p>
+            <h2 id="statusTitle">Il tuo display</h2>
+          </div>
+          <button class="btn icon" id="refreshAll" title="Aggiorna ora" aria-label="Aggiorna ora">↻</button>
+        </div>
+        <div class="status-list">
+          <div class="status-item">
+            <span class="status-name"><i class="dot" id="deviceDot"></i> TC002</span>
+            <span class="status-value" id="deviceStatus">Verifica…</span>
+          </div>
+          <div class="status-item">
+            <span class="status-name"><i class="dot" id="mqttDot"></i> MQTT</span>
+            <span class="status-value" id="mqttStatus">Verifica…</span>
+          </div>
+          <div class="status-item">
+            <span class="status-name">Luminosità</span>
+            <span class="status-value" id="statusBrightness">—</span>
+          </div>
+          <div class="status-item">
+            <span class="status-name">Bridge</span>
+            <span class="status-value" id="bridgeVersion">—</span>
+          </div>
+        </div>
+
+      </section>
+    </div>
+
+    <nav class="workspace-tabs" role="tablist" aria-label="Gestione del display">
+      <button type="button" class="workspace-tab" id="tab-screens" role="tab" aria-controls="panel-screens" aria-selected="true" tabindex="0" data-tab="screens">Schermate</button>
+      <button type="button" class="workspace-tab" id="tab-studio" role="tab" aria-controls="panel-studio" aria-selected="false" tabindex="-1" data-tab="studio">App Studio</button>
+      <button type="button" class="workspace-tab" id="tab-device" role="tab" aria-controls="panel-device" aria-selected="false" tabindex="-1" data-tab="device">Dispositivo</button>
+      <button type="button" class="workspace-tab" id="tab-diagnostics" role="tab" aria-controls="panel-diagnostics" aria-selected="false" tabindex="-1" data-tab="diagnostics">Diagnostica</button>
+    </nav>
+    <div class="workspace-panel" id="panel-screens" role="tabpanel" aria-labelledby="tab-screens" tabindex="0">
+      <section class="card" aria-labelledby="appsTitle">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">Carousel</p>
+            <h2 id="appsTitle">Schermate</h2>
+            <p class="subtle">Con il layout a due righe puoi scegliere il titolo di ogni app. Usa un testo breve: i titoli lunghi vengono abbreviati. Un campo vuoto ripristina il titolo automatico.</p>
+            <p class="subtle">Attiva, riordina o mostra subito un’app. Per rimuoverla dalla rotazione, spegni l’interruttore e salva l’ordine.</p>
+          </div>
+        </div>
+        <div class="apps-body">
+          <div class="apps-list" id="appsList" aria-live="polite"></div>
+          <div class="apps-footer">
+            <small id="appsCount">Caricamento…</small>
+            <button class="btn primary" id="saveApps" disabled>Salva schermate</button>
+          </div>
+        </div>
+      </section>    <section class="card studio-card" id="sonosControl" aria-labelledby="sonosTitle">
+      <div class="card-head">
+        <div>
+          <p class="eyebrow">Telecomando</p>
+          <h2 id="sonosTitle">Modalità Sonos</h2>
+          <p class="subtle">Tieni premuta la ghiera per entrare o uscire. In modalità Sonos il carosello resta fermo.</p>
+        </div>
+        <div class="live-pill"><i class="dot" id="sonosDot"></i><span id="sonosStatus">Caricamento…</span></div>
+      </div>
+      <form class="form-body" id="sonosForm">
+        <div class="switch-row">
+          <div>
+            <div class="label">Abilita modalità Sonos</div>
+            <div class="subtle">Consente alla pressione lunga della ghiera di attivare il telecomando.</div>
+          </div>
+          <label class="switch" title="Abilita modalità Sonos">
+            <input id="sonosEnabled" type="checkbox"><span></span>
+          </label>
+        </div>
+        <div class="two-fields">
+          <div class="field">
+            <label for="sonosPlayer">Sonos Player</label>
+            <select id="sonosPlayer"></select>
+          </div>
+          <div class="field">
+            <label for="sonosVolumeStep">Scatto volume (%)</label>
+            <input id="sonosVolumeStep" type="number" min="1" max="25" step="1" inputmode="numeric">
+          </div>
+        </div>
+        <div class="field">
+          <label for="sonosPlaylistId">Playlist, preferito o URI da avviare</label>
+          <input id="sonosPlaylistId" type="text" maxlength="1024" placeholder="es. spotify:playlist:… oppure S:/MiaPlaylist">
+          <p class="subtle">Al primo clic di ogni sessione Sonos, questo contenuto viene caricato. Se lasci vuoto, il clic esegue play/pausa.</p>
+        </div>
+        <div class="two-fields">
+          <div class="field">
+            <label for="sonosPlaylistType">Tipo contenuto</label>
+            <input id="sonosPlaylistType" type="text" maxlength="128" placeholder="playlist">
+          </div>
+          <div class="field">
+            <label for="sonosLongPress">Pressione lunga (ms)</label>
+            <input id="sonosLongPress" type="number" min="600" max="3000" step="100" inputmode="numeric">
+          </div>
+        </div>
+        <div class="status-note" id="sonosNowPlaying">La modalità Sonos non è attiva.</div>
+        <div class="form-actions">
+          <button class="btn" type="button" id="sonosPrevious">Brano precedente</button>
+          <button class="btn" type="button" id="sonosPlayPause">Play / Pausa</button>
+          <button class="btn" type="button" id="sonosNext">Brano successivo</button>
+          <button class="btn" type="button" id="sonosVolumeDown">Volume Sonos −</button>
+          <button class="btn" type="button" id="sonosVolumeUp">Volume Sonos +</button>
+          <button class="btn" type="button" id="sonosToggle">Attiva ora</button>
+          <button class="btn primary" type="submit">Salva Sonos</button>
+        </div>
+      </form>
+    </section>
+    </div>
+    <div class="workspace-panel" id="panel-studio" role="tabpanel" aria-labelledby="tab-studio" tabindex="0" hidden>
+    <section class="card studio-card" id="studio" aria-labelledby="studioTitle">
+      <div class="card-head">
+        <div>
+          <p class="eyebrow">Designer</p>
+          <h2 id="studioTitle">App Studio</h2>
+          <p class="subtle">Crea schermate statiche o collegate a un’entità Home Assistant, senza scrivere YAML.</p>
+        </div>
+        <button class="btn" id="newStudioApp" type="button">＋ Nuova app</button>
+      </div>
+      <div class="studio-layout">
+        <div class="studio-editor">
+          <div class="studio-preview">
+            <div class="studio-preview-head">
+              <strong>Anteprima app</strong>
+              <span>52 × 16 · dati di esempio</span>
+            </div>
+            <div class="clock-shell">
+              <canvas id="studioScreen" width="52" height="16" aria-label="Anteprima dell’app personalizzata"></canvas>
+            </div>
+          </div>
+
+          <p class="studio-preview-status" id="studioPreviewStatus" role="status">Completa i campi per vedere l’anteprima.</p>
+          <div class="studio-tip" id="studioAccess">Verifico l’accesso a Home Assistant…</div>
+
+          <form class="studio-form" id="studioForm">
+            <fieldset class="template-picker">
+              <legend>Modello grafico</legend>
+              <input id="studioDisplayTemplate" type="hidden" value="inherit">
+              <div class="template-gallery">
+                <button type="button" class="template-option" data-template="inherit" aria-pressed="true"><canvas id="template-inherit" width="52" height="16" aria-hidden="true"></canvas><strong>Come il display</strong><small>Usa le impostazioni generali</small></button>
+                <button type="button" class="template-option" data-template="focus" aria-pressed="false"><canvas id="template-focus" width="52" height="16" aria-hidden="true"></canvas><strong>In evidenza</strong><small>Valore grande, spazio adattivo</small></button>
+                <button type="button" class="template-option" data-template="labelled" aria-pressed="false"><canvas id="template-labelled" width="52" height="16" aria-hidden="true"></canvas><strong>Titolo e valore</strong><small>Due righe ben distinte</small></button>
+              </div>
+              <p class="subtle" id="templateHelp">Il modello cambia solo questa app. Contenuto e colori restano personalizzabili.</p>
+            </fieldset>
+            <div class="field" id="studioDisplayTitleField" hidden>
+              <label for="studioDisplayTitle">Titolo breve sul display</label>
+              <input id="studioDisplayTitle" type="text" maxlength="32" placeholder="es. CASA, CO2, ENERGIA">
+              <small>Se vuoto, viene usato il nome dell’app. I titoli lunghi vengono abbreviati.</small>
+            </div>
+
+            <div class="two-fields">
+              <div class="field">
+                <label for="studioName">Nome app</label>
+                <input id="studioName" type="text" maxlength="32" pattern="[A-Za-z0-9_-]{1,32}" placeholder="es. studio_temperatura" required>
+              </div>
+              <div class="field">
+                <label for="studioSourceType">Contenuto</label>
+                <select id="studioSourceType">
+                  <option value="static">Testo statico</option>
+                  <option value="entity">Sensore / entità Home Assistant</option>
+                  <option value="countdown">Countdown</option>
+                  <option value="weather">Meteo</option>
+                  <option value="rain">Previsione pioggia</option>
+                  <option value="calendar">Calendario</option>
+                  <option value="todo">Lista Todo</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field" id="studioTemplateField" hidden>
+              <label for="studioValueTemplate">Formato personalizzato</label>
+              <input id="studioValueTemplate" type="text" maxlength="256" placeholder="es. Temperatura {value} {unit}">
+              <p class="subtle">Variabili disponibili: {value}, {unit}, {state}.</p>
+            </div>
+
+            <div class="countdown-fields" id="studioCountdownFields" hidden>
+              <div class="two-fields">
+                <div class="field"><label for="studioTargetDateTime">Data e ora evento</label><input id="studioTargetDateTime" type="datetime-local" step="1"></div>
+                <div class="field"><label for="studioCountdownTitle">Titolo</label><input id="studioCountdownTitle" type="text" maxlength="48" value="Countdown"></div>
+              </div>
+              <div class="field"><label for="studioReachedText">Testo a scadenza</label><input id="studioReachedText" type="text" maxlength="128" value="Ora!"></div>
+              <div class="two-fields">
+                <div class="switch-row"><div><div class="label">Mostra titolo</div></div><label class="switch"><input id="studioShowTitle" type="checkbox" checked><span></span></label></div>
+                <div class="switch-row"><div><div class="label">Mostra secondi</div></div><label class="switch"><input id="studioShowSeconds" type="checkbox" checked><span></span></label></div>
+              </div>
+            </div>
+
+            <div class="weather-fields" id="studioWeatherFields" hidden>
+              <div class="field"><label for="studioWeatherLanguage">Lingua descrizione</label><select id="studioWeatherLanguage"><option value="it">Italiano</option><option value="en">Inglese</option></select></div>
+              <div class="two-fields">
+                <div class="switch-row"><div><div class="label">Condizione meteo</div></div><label class="switch"><input id="studioShowWeatherText" type="checkbox" checked><span></span></label></div>
+                <div class="switch-row"><div><div class="label">Temperatura</div></div><label class="switch"><input id="studioShowTemperature" type="checkbox" checked><span></span></label></div>
+                <div class="switch-row"><div><div class="label">Vento</div></div><label class="switch"><input id="studioShowWindSpeed" type="checkbox"><span></span></label></div>
+                <div class="switch-row"><div><div class="label">Umidità</div></div><label class="switch"><input id="studioShowHumidity" type="checkbox" checked><span></span></label></div>
+              </div>
+              <div class="switch-row"><div><div class="label">Icona meteo dinamica</div><small>Cambia automaticamente con la condizione di Home Assistant; l’icona manuale resta come fallback.</small></div><label class="switch"><input id="studioDynamicWeatherIcon" type="checkbox" checked><span></span></label></div>
+            </div>
+
+            <div class="rain-fields" id="studioRainFields" hidden>
+              <div class="three-fields">
+                <div class="field"><label for="studioChartType">Grafico</label><select id="studioChartType"><option value="barChart">Barre</option><option value="lineChart">Linea</option></select></div>
+                <div class="field"><label for="studioChartColor">Colore grafico</label><input id="studioChartColor" type="color" value="#4db8ff"></div>
+                <div class="switch-row"><div><div class="label">Scala automatica</div></div><label class="switch"><input id="studioChartAutoscale" type="checkbox" checked><span></span></label></div>
+              </div>
+            </div>
+
+            <div class="list-fields" id="studioListFields" hidden>
+              <div class="two-fields">
+                <div class="field"><label for="studioHoursAhead">Ore future</label><input id="studioHoursAhead" type="number" min="1" max="720" value="24"></div>
+                <div class="field"><label for="studioMaxItems">Numero massimo</label><input id="studioMaxItems" type="number" min="1" max="20" value="3"></div>
+              </div>
+              <div class="field"><label for="studioEmptyText">Testo lista vuota</label><input id="studioEmptyText" type="text" maxlength="128" value="Nessun elemento"></div>
+              <div class="switch-row"><div><div class="label">Mostra anche se vuota</div></div><label class="switch"><input id="studioShowEmpty" type="checkbox" checked><span></span></label></div>
+            </div>
+
+            <div class="static-fields" id="studioStaticFields">
+              <div class="field">
+                <label for="studioStaticText">Testo</label>
+                <input id="studioStaticText" type="text" maxlength="256" value="Ciao!" placeholder="Testo da mostrare">
+              </div>
+            </div>
+
+            <div class="entity-fields" id="studioEntityFields" hidden>
+              <div class="two-fields">
+                <div class="field">
+                  <label for="studioEntityId">ID entità</label>
+                  <input id="studioEntityId" type="text" maxlength="128" placeholder="sensor.temperatura_soggiorno">
+                </div>
+                <div class="field">
+                  <label for="studioAttribute">Attributo (opzionale)</label>
+                  <input id="studioAttribute" type="text" maxlength="64" placeholder="es. media_title">
+                </div>
+              </div>
+              <div class="three-fields">
+                <div class="field">
+                  <label for="studioPrefix">Prefisso</label>
+                  <input id="studioPrefix" type="text" maxlength="48" placeholder="es. Casa ">
+                </div>
+                <div class="field">
+                  <label for="studioSuffix">Unità/suffisso</label>
+                  <input id="studioSuffix" type="text" maxlength="48" placeholder="automatico">
+                </div>
+                <div class="field">
+                  <label for="studioDecimals">Decimali</label>
+                  <select id="studioDecimals">
+                    <option value="-1">Automatici</option>
+                    <option value="0">0</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                  </select>
+                </div>
+              </div>
+              <div class="two-fields">
+                <div class="field">
+                  <label for="studioVisibleWhen">Mostra solo quando (opzionale)</label>
+                  <input id="studioVisibleWhen" type="text" maxlength="64" placeholder="es. playing oppure on">
+                </div>
+                <div class="field">
+                  <label for="studioSample">Valore anteprima</label>
+                  <input id="studioSample" type="text" maxlength="64" value="123" placeholder="es. 21.5">
+                </div>
+              </div>
+              <div class="two-fields">
+                <div class="switch-row">
+                  <div>
+                    <div class="label">Unità dall’entità</div>
+                    <div class="subtle">Usata se il suffisso è vuoto.</div>
+                  </div>
+                  <label class="switch" title="Unità automatica">
+                    <input id="studioUseEntityUnit" type="checkbox" checked><span></span>
+                  </label>
+                </div>
+                <div class="switch-row">
+                  <div>
+                    <div class="label">Nascondi se non disponibile</div>
+                    <div class="subtle">Evita schermate con dati mancanti.</div>
+                  </div>
+                  <label class="switch" title="Nascondi dato non disponibile">
+                    <input id="studioHideUnavailable" type="checkbox" checked><span></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="two-fields">
+              <div class="field">
+                <label for="studioIcon">Icona GIF/JPG</label>
+                <div class="icon-tools">
+                  <select id="studioIcon"><option value="">Nessuna icona</option></select>
+                  <label class="btn file-button">Carica
+                    <input id="studioIconUpload" type="file" accept="image/gif,image/jpeg">
+                  </label>
+                </div>
+              </div>
+              <div class="field">
+                <label for="studioFont">Dimensione testo</label>
+                <select id="studioFont">
+                  <option value="large">Grande</option>
+                  <option value="small">Piccolo</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="three-fields">
+              <div class="field"><label for="studioTextCase">Formato testo</label><select id="studioTextCase"><option value="asTyped">Come scritto</option><option value="upper">Maiuscolo</option><option value="inherit">Impostazione globale</option></select></div>
+              <div class="field"><label for="studioIconMode">Movimento icona</label><select id="studioIconMode"><option value="fixed">Fissa</option><option value="pushOnce">Scorre una volta</option><option value="push">Scorre con il testo</option></select></div>
+              <div class="field"><label for="studioUnitOverride">Unità personalizzata</label><input id="studioUnitOverride" type="text" maxlength="48" placeholder="es. kWh"></div>
+            </div>
+
+            <div class="lametric-import">
+              <div class="lametric-import-copy">
+                <strong>Importa dalla galleria LaMetric</strong>
+                <a href="https://developer.lametric.com/icons" target="_blank" rel="noopener noreferrer">Apri galleria ↗</a>
+              </div>
+              <div class="field">
+                <label for="studioLametricId">ID icona</label>
+                <input id="studioLametricId" type="text" maxlength="9" pattern="[0-9]{1,9}" inputmode="numeric" placeholder="es. 54313" aria-describedby="studioLametricHelp">
+              </div>
+              <div class="lametric-actions">
+                <button class="btn" id="importLametricFaithful" type="button">Fedele 2×</button>
+                <button class="btn primary" id="importLametricOptimized" type="button">Ottimizzata TC002</button>
+              </div>
+              <p class="lametric-help" id="studioLametricHelp">Fedele usa 16×16 pixel. Ottimizzata TC002 comprime simmetricamente l’icona a 12×16, lasciando quattro pixel in più al testo. La modalità scelta sostituisce la variante precedente.</p>
+            </div>
+
+            <div class="two-fields">
+              <div class="field">
+                <label for="studioTextColor">Colore testo</label>
+                <div class="color-field"><output id="studioTextColorValue">#FFFFFF</output><input id="studioTextColor" type="color" value="#ffffff"></div>
+              </div>
+              <div class="field">
+                <label for="studioBackgroundColor">Colore sfondo</label>
+                <div class="color-field"><output id="studioBackgroundColorValue">#000000</output><input id="studioBackgroundColor" type="color" value="#000000"></div>
+              </div>
+            </div>
+
+            <div class="three-fields">
+              <div class="field"><label for="studioColorMode">Colorazione</label><select id="studioColorMode"><option value="solid">Tinta unita</option><option value="gradient">Gradiente</option><option value="rainbow">Arcobaleno</option></select></div>
+              <div class="field"><label for="studioGradientColor">Secondo colore</label><input id="studioGradientColor" type="color" value="#00ffff"></div>
+              <div class="field"><label for="studioThresholdValue">Soglia</label><input id="studioThresholdValue" type="number" step="any" value="0"></div>
+            </div>
+            <div class="three-fields">
+              <div class="switch-row"><div><div class="label">Colori per soglia</div></div><label class="switch"><input id="studioUseThreshold" type="checkbox"><span></span></label></div>
+              <div class="field"><label for="studioLowColor">Sotto soglia</label><input id="studioLowColor" type="color" value="#00ff7f"></div>
+              <div class="field"><label for="studioHighColor">Da soglia in su</label><input id="studioHighColor" type="color" value="#ff453a"></div>
+            </div>
+
+            <div class="three-fields">
+              <div class="field">
+                <label for="studioDuration">Durata (secondi)</label>
+                <input id="studioDuration" type="number" min="1" max="3600" step="1" value="10">
+              </div>
+              <div class="field">
+                <label for="studioScrollSpeed">Scorrimento (ms/pixel)</label>
+                <input id="studioScrollSpeed" type="number" min="10" max="1000" step="5" value="85">
+              </div>
+              <div class="field">
+                <label for="studioScrollHold">Pausa (ms)</label>
+                <input id="studioScrollHold" type="number" min="0" max="10000" step="100" value="1000">
+              </div>
+            </div>
+
+            <div class="three-fields">
+              <div class="field"><label for="studioRepeat">Ripetizioni</label><input id="studioRepeat" type="number" min="0" max="100" value="1"></div>
+              <div class="field"><label for="studioLifetime">Scadenza (secondi)</label><input id="studioLifetime" type="number" min="0" max="86400" value="0"></div>
+              <div class="field"><label for="studioLifetimeExpiry">Alla scadenza</label><select id="studioLifetimeExpiry"><option value="remove">Rimuovi</option><option value="mark">Segna scaduta</option></select></div>
+            </div>
+
+            <div class="two-fields">
+              <div class="field">
+                <label for="studioEffect">Sfondo animato</label>
+                <select id="studioEffect">
+                  <option value="">Nessuno</option>
+                  <option>Checkerboard</option><option>ColorWaves</option><option>Fade</option>
+                  <option>Fireworks</option><option>Matrix</option><option>MovingLine</option>
+                  <option>Pacifica</option><option>PingPong</option><option>Plasma</option>
+                  <option>PlasmaCloud</option><option>Ripple</option><option>Snake</option>
+                  <option>SwirlIn</option><option>SwirlOut</option><option>TheaterChase</option>
+                  <option>TwinklingStars</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="studioOverlay">Effetto in primo piano</label>
+                <select id="studioOverlay">
+                  <option value="">Nessuno</option>
+                  <option value="rain">Pioggia</option><option value="snow">Neve</option>
+                  <option value="drizzle">Pioggerella</option><option value="storm">Tempesta</option>
+                  <option value="thunder">Fulmini</option><option value="frost">Gelo</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="two-fields">
+              <div class="switch-row"><div><div class="label">Scorrimento testo</div><div class="subtle">Se disattivato, il testo resta fermo.</div></div><label class="switch"><input id="studioScrollEnabled" type="checkbox" checked><span></span></label></div>
+              <div class="switch-row"><div><div class="label">Mostra quando cambia</div><div class="subtle">Porta subito l’app sul display.</div></div><label class="switch"><input id="studioSwitchOnChange" type="checkbox"><span></span></label></div>
+            </div>
+
+            <div class="two-fields">
+              <div class="switch-row">
+                <div>
+                  <div class="label">Centra il testo</div>
+                  <div class="subtle">Quando entra nello spazio disponibile.</div>
+                </div>
+                <label class="switch" title="Centra il testo">
+                  <input id="studioTextCenter" type="checkbox" checked><span></span>
+                </label>
+              </div>
+              <div class="switch-row">
+                <div>
+                  <div class="label">App attiva</div>
+                  <div class="subtle">La inserisce nel carousel.</div>
+                </div>
+                <label class="switch" title="App attiva">
+                  <input id="studioEnabled" type="checkbox" checked><span></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn" id="resetStudioForm" type="button">Annulla</button>
+              <button class="btn primary" id="saveStudioApp" type="submit" value="save">Salva app</button>
+              <button class="btn primary" id="saveShowStudioApp" type="submit" value="show">Salva e mostra</button>
+            </div>
+          </form>
+        </div>
+
+        <aside class="studio-library">
+          <div class="studio-library-head">
+            <h3>Le mie app</h3>
+            <span class="value-badge" id="studioCount">0</span>
+          </div>
+          <div class="studio-list" id="studioList"></div>
+        </aside>
+      </div>
+    </section>
+    </div>
+    <div class="workspace-panel" id="panel-device" role="tabpanel" aria-labelledby="tab-device" tabindex="0" hidden>
+      <section class="card settings-overview" aria-labelledby="settingsOverviewTitle">
+        <div class="card-head"><div>
+          <p class="eyebrow">Sistema · TC002</p>
+          <h2 id="settingsOverviewTitle">Centro impostazioni</h2>
+          <p class="subtle">Stato del dispositivo, connettività e funzioni disponibili.</p>
+        </div></div>
+        <p class="settings-intro">Questa pagina gira sul bridge esterno. Le impostazioni qui sotto controllano il bridge e la sua uscita sul pannello; la configurazione del Linux stock rimane separata fino all’installazione di un runtime locale qualificato.</p>
+        <div class="settings-map">
+          <div class="settings-tile"><span class="settings-tag available">Disponibile ora</span><h3>Schermo e aspetto</h3><p>Luminosità, accensione, font, layout, effetti e transizioni.</p><a href="#settingsForm">Apri controlli display</a></div>
+          <div class="settings-tile"><span class="settings-tag available">Disponibile ora</span><h3>Ora e schermate</h3><p>Formato dell’ora, durata delle app e velocità di scorrimento. Il fuso orario proviene dalla configurazione del bridge.</p><a href="#settingsForm">Apri controlli ora e app</a></div>
+          <div class="settings-tile"><span class="settings-tag available">Disponibile ora</span><h3>Audio e manopola</h3><p>Volume locale, feedback della ghiera e modalità Sonos. Disponibilità audio secondo l’adapter.</p><a href="#settingsForm">Apri controlli audio</a></div>
+          <div class="settings-tile"><span class="settings-tag">Firmware stock</span><h3>Rete Wi‑Fi</h3><p>Il bridge non configura le credenziali Wi‑Fi del TC002. Usa la configurazione Ulanzi stock; il primo setup del futuro runtime locale è ancora da qualificare.</p><strong id="settingsWifiState">Stato rete non disponibile</strong><a href="https://docs.ulanzistudio.com/tc002/en/software/ulanzi-studio" target="_blank" rel="noopener noreferrer">Guida Ulanzi Wi‑Fi ↗</a></div>
+          <div class="settings-tile"><span class="settings-tag">Configurazione bridge</span><h3>MQTT e Home Assistant</h3><p>Broker, credenziali, TLS e discovery sono impostati nella configurazione del bridge o dell’add-on Home Assistant. Nessuna password viene mostrata qui.</p><strong id="settingsMqttState">Stato broker non disponibile</strong><a href="https://github.com/lucaamo/tc002-awtrix-ha-addon/blob/main/addon/config.yaml" target="_blank" rel="noopener noreferrer">Esempio configurazione bridge ↗</a></div>
+          <div class="settings-tile"><span class="settings-tag">In qualificazione</span><h3>Accesso, aggiornamenti e recupero</h3><p>Account locale, provisioning, aggiornamento e ripristino non sono controlli disponibili sul TC002 attuale. Non eseguire reset o flash da questa pagina.</p><strong id="settingsRuntimeState">Companion temporaneo</strong></div>
+          <div class="settings-tile"><span class="settings-tag">Configurazione bridge</span><h3>Fuso orario e servizi</h3><p>Il fuso orario viene caricato all’avvio del bridge. NTP, dimmer notturno, mDNS e metriche sul TC002 richiedono il runtime locale e prove hardware.</p></div>
+          <div class="settings-tile"><span class="settings-tag available">Disponibile ora</span><h3>Notifiche e integrazioni</h3><p>Notifiche, moodlight, indicatori, app personalizzate e Sonos sono gestiti dal bridge.</p><a href="#awtrixTools">Apri strumenti AWTRIX</a></div>
+          <div class="settings-tile"><span class="settings-tag">In qualificazione</span><h3>Configurazione autonoma</h3><p>Un TC002 nuovo dovrà poter impostare rete e accesso senza Home Assistant. La procedura fisica protetta e il recupero da credenziali errate non sono ancora verificati.</p></div>
+        </div>
+      </section>
+      <section class="card" aria-labelledby="settingsTitle">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">Display</p>
+            <h2 id="settingsTitle">Display, ora e audio</h2>
+            <p class="subtle">Le modifiche vengono salvate nel bridge.</p>
+          </div>
+        </div>
+        <form class="form-body" id="settingsForm">
+          <div class="field">
+            <div class="field-row">
+              <label for="brightness">Luminosità</label>
+              <output class="value-badge" id="brightnessValue" for="brightness">—</output>
+            </div>
+            <input id="brightness" name="brightness" type="range" min="0" max="255" step="1">
+          </div>
+
+          <div class="field">
+            <div class="field-row">
+              <label for="volume">Volume locale TC002</label>
+              <output class="value-badge" id="volumeValue" for="volume">—</output>
+            </div>
+            <input id="volume" name="volume" type="range" min="0" max="100" step="1">
+          </div>
+
+          <div class="field">
+            <label for="timeFormat">Formato ora</label>
+            <select id="timeFormat" name="timeFormat">
+              <option value="hhmm">HH:MM</option>
+              <option value="hhmmss">HH:MM:SS</option>
+              <option value="hhmm_ampm">HH:MM AM/PM</option>
+            </select>
+            <p class="subtle">Scegli il formato usato dalla schermata Ora.</p>
+          </div>
+
+          <div class="field">
+            <label for="timeDateFontSize">Dimensione Ora e Data</label>
+            <select id="timeDateFontSize" name="timeDateFontSize">
+              <option value="small">Piccolo · Scientifica</option>
+              <option value="large">Grande · Silkscreen 2×</option>
+            </select>
+            <p class="subtle">Piccolo mantiene la resa Scientifica attuale. Grande usa le cifre Silkscreen classiche.</p>
+          </div>
+
+          <div class="field">
+            <label for="fontFamily">Font TC002</label>
+            <select id="fontFamily" name="fontFamily">
+              <option value="scientifica">Scientifica · minuscolo</option>
+              <option value="silkscreen">Silkscreen · classico</option>
+              <option value="scientifica_italic">Scientifica · corsivo</option>
+              <option value="awtrix_1x">AWTRIX · fedele 1×</option>
+              <option value="awtrix">AWTRIX · fedele 2×</option>
+            </select>
+            <p class="subtle">Scientifica è un font bitmap nativo a 11 pixel; AWTRIX usa i glifi originali in scala 1× o 2×.</p>
+          </div>
+
+          <div class="field">
+            <label for="displayLayout">Layout app</label>
+            <select id="displayLayout" name="displayLayout">
+              <option value="singleLine">Una riga · testo grande</option>
+              <option value="twoLine">Due righe · titolo + valore</option>
+            </select>
+            <p class="subtle" id="displayLayoutHelp">Con Silkscreen, il titolo resta fermo in alto e soltanto il valore scorre quando serve.</p>
+          </div>
+
+          <div class="two-fields">
+            <div class="field">
+              <label for="duration">Durata app (secondi)</label>
+              <input id="duration" name="duration" type="number" min="1" max="3600" step="1" inputmode="numeric">
+            </div>
+            <div class="field">
+              <label for="musicTitleScrollRepeats">Passaggi titolo Musica</label>
+              <input id="musicTitleScrollRepeats" name="musicTitleScrollRepeats" type="number" min="1" max="10" step="1" inputmode="numeric">
+              <p class="subtle">Quante volte scorre il titolo nella seconda riga.</p>
+            </div>
+          </div>
+
+          <div class="two-fields">
+            <div class="field">
+              <label for="scrollSpeed">Scorrimento (ms/pixel)</label>
+              <input id="scrollSpeed" name="scrollSpeed" type="number" min="10" max="1000" step="5" inputmode="numeric">
+            </div>
+            <div class="field">
+              <label for="scrollHold">Pausa iniziale (ms)</label>
+              <input id="scrollHold" name="scrollHold" type="number" min="0" max="10000" step="100" inputmode="numeric">
+            </div>
+          </div>
+
+          <div class="two-fields">
+            <div class="field">
+              <label for="transitionDuration">Durata transizione (ms)</label>
+              <input id="transitionDuration" name="transitionDuration" type="number" min="0" max="5000" step="100" inputmode="numeric">
+            </div>
+            <div class="field">
+              <label for="transition">Transizione</label>
+              <select id="transition" name="transition"></select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="overlay">Effetto sovrapposto</label>
+            <select id="overlay" name="overlay">
+              <option value="">Nessuno</option>
+              <option value="rain">Pioggia</option>
+              <option value="snow">Neve</option>
+              <option value="drizzle">Pioggerella</option>
+              <option value="storm">Tempesta</option>
+              <option value="thunder">Fulmini</option>
+              <option value="frost">Gelo</option>
+            </select>
+          </div>
+
+          <div class="switch-row">
+            <div>
+              <div class="label">Avanzamento automatico</div>
+              <div class="subtle">Ruota le app dopo la durata impostata.</div>
+            </div>
+            <label class="switch" title="Avanzamento automatico">
+              <input id="autoRotate" type="checkbox"><span></span>
+            </label>
+          </div>
+
+          <div class="switch-row">
+            <div>
+              <div class="label">Animazione transizione</div>
+              <div class="subtle">Sfuma il passaggio tra una schermata e la successiva.</div>
+            </div>
+            <label class="switch" title="Animazione transizione">
+              <input id="autoTransition" type="checkbox"><span></span>
+            </label>
+          </div>
+
+          <div class="switch-row">
+            <div>
+              <div class="label">Suono ghiera</div>
+              <div class="subtle">Riproduce un breve feedback audio a ogni scatto.</div>
+            </div>
+            <label class="switch" title="Feedback audio della ghiera">
+              <input id="knobSoundEnabled" type="checkbox"><span></span>
+            </label>
+          </div>
+
+          <div class="switch-row">
+            <div>
+              <div class="label">Testo maiuscolo</div>
+              <div class="subtle">Si applica quando l’app non forza il formato.</div>
+            </div>
+            <label class="switch" title="Testo maiuscolo">
+              <input id="uppercase" type="checkbox"><span></span>
+            </label>
+          </div>
+
+          <div class="switch-row">
+            <div>
+              <div class="label">Display acceso</div>
+              <div class="subtle">Spegne o riaccende la matrice senza fermare il bridge.</div>
+            </div>
+            <label class="switch" title="Display acceso">
+              <input id="displayPower" type="checkbox"><span></span>
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn" type="button" id="reloadSettings">Annulla</button>
+            <button class="btn primary" type="submit" id="saveSettings">Salva impostazioni</button>
+          </div>
+        </form>
+      </section>    <section class="card" id="awtrixTools" aria-labelledby="awtrixToolsTitle">
+      <div class="card-head">
+        <div>
+          <p class="eyebrow">AWTRIX Tools</p>
+          <h2 id="awtrixToolsTitle">Notifiche e controlli dispositivo</h2>
+          <p class="subtle">Funzioni derivate dai blueprint: notifiche, moodlight e indicatori. La durata globale si imposta qui sopra; le app sono nella scheda Schermate.</p>
+        </div>
+      </div>
+      <div class="form-body">
+        <form id="notificationForm">
+          <h3>Notifica</h3>
+          <div class="two-fields">
+            <div class="field"><label for="toolNotificationText">Testo</label><input id="toolNotificationText" type="text" maxlength="256" placeholder="Messaggio" required></div>
+            <div class="field"><label for="toolNotificationIcon">Icona (opzionale)</label><input id="toolNotificationIcon" type="text" maxlength="64" placeholder="nome icona"></div>
+          </div>
+          <div class="three-fields">
+            <div class="field"><label for="toolNotificationDuration">Durata (secondi)</label><input id="toolNotificationDuration" type="number" min="1" max="3600" value="10"></div>
+            <div class="field"><label for="toolNotificationSound">Suono MP3 (opzionale)</label><input id="toolNotificationSound" type="text" maxlength="64" placeholder="es. volume"></div>
+            <div class="field"><label for="toolNotificationColor">Colore</label><input id="toolNotificationColor" type="color" value="#ffffff"></div>
+          </div>
+          <div class="two-fields">
+            <div class="switch-row"><div><div class="label">Mantieni finché rimossa</div></div><label class="switch"><input id="toolNotificationHold" type="checkbox"><span></span></label></div>
+            <div class="switch-row"><div><div class="label">Accoda alle notifiche</div></div><label class="switch"><input id="toolNotificationStack" type="checkbox" checked><span></span></label></div>
+          </div>
+          <div class="form-actions"><button class="btn" id="dismissNotification" type="button">Rimuovi notifica</button><button class="btn primary" type="submit">Invia notifica</button></div>
+        </form>
+
+        <form id="moodlightForm">
+          <h3>Moodlight</h3>
+          <div class="three-fields">
+            <div class="switch-row"><div><div class="label">Attiva moodlight</div></div><label class="switch"><input id="toolMoodlightEnabled" type="checkbox"><span></span></label></div>
+            <div class="field"><label for="toolMoodlightColor">Colore</label><input id="toolMoodlightColor" type="color" value="#ffffff"></div>
+            <div class="field"><label for="toolMoodlightBrightness">Luminosità</label><input id="toolMoodlightBrightness" type="number" min="0" max="255" value="100"></div>
+          </div>
+          <div class="field"><label for="toolMoodlightKelvin">Temperatura colore Kelvin (0 = usa il colore)</label><input id="toolMoodlightKelvin" type="number" min="0" max="40000" value="0"></div>
+          <div class="form-actions"><button class="btn primary" type="submit">Applica moodlight</button></div>
+        </form>
+
+        <form id="indicatorsForm">
+          <h3>Indicatori laterali</h3>
+          <div class="three-fields">
+            <div class="field"><label>Indicatore 1</label><div class="two-fields"><input id="toolIndicator1Enabled" type="checkbox"><input id="toolIndicator1Color" type="color" value="#ffffff"></div><input id="toolIndicator1Blink" type="number" min="0" max="60000" value="0" aria-label="Lampeggio indicatore 1 in ms"></div>
+            <div class="field"><label>Indicatore 2</label><div class="two-fields"><input id="toolIndicator2Enabled" type="checkbox"><input id="toolIndicator2Color" type="color" value="#ffffff"></div><input id="toolIndicator2Blink" type="number" min="0" max="60000" value="0" aria-label="Lampeggio indicatore 2 in ms"></div>
+            <div class="field"><label>Indicatore 3</label><div class="two-fields"><input id="toolIndicator3Enabled" type="checkbox"><input id="toolIndicator3Color" type="color" value="#ffffff"></div><input id="toolIndicator3Blink" type="number" min="0" max="60000" value="0" aria-label="Lampeggio indicatore 3 in ms"></div>
+          </div>
+          <p class="subtle">Il valore sotto ogni indicatore è il tempo di lampeggio in millisecondi; 0 significa luce fissa.</p>
+          <div class="form-actions"><button class="btn primary" type="submit">Applica indicatori</button></div>
+        </form>
+      </div>
+    </section>
+    </div>
+    <div class="workspace-panel" id="panel-diagnostics" role="tabpanel" aria-labelledby="tab-diagnostics" tabindex="0" hidden>
+    <details open>
+      <summary>Informazioni sul collegamento</summary>
+      <p class="status-note" id="frameLifetimeNote">In attesa dello stato del collegamento.</p>
+      <div class="details-grid">
+        <div class="detail"><span>IP dispositivo</span><strong id="detailHost">—</strong></div>
+        <div class="detail"><span>App HTTP</span><strong id="detailHttpApp">—</strong></div>
+        <div class="detail"><span>Renderer</span><strong id="detailRenderer">—</strong></div>
+        <div class="detail"><span>MQTT prefix</span><strong id="detailPrefix">—</strong></div>
+      </div>
+    </details>
+
+    </div>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    "use strict";
+
+    const $ = (id) => document.getElementById(id);
+    const state = {
+      settings: null,
+      display: null,
+      device: null,
+      capabilities: null,
+      apps: [],
+      appsDirty: false,
+      titleEdits: {},
+      studioApps: [],
+      studioEditingName: null,
+      studioAuthorized: false,
+      studioAccessMessage: "Verifico l’accesso a Home Assistant…",
+      studioAccessError: false,
+      studioPreviewTimer: null,
+      studioPreviewMessage: "Completa i campi per vedere l’anteprima.",
+      studioPreviewValues: {},
+      sonos: null,
+      busy: false,
+      toastTimer: null,
+    };
+
+    const ENGLISH = {
+      "Controllo rapido Home Assistant": "Home Assistant quick control",
+      "Crea app": "Create app",
+      "Lingua interfaccia": "Interface language",
+      "Stato del bridge": "Bridge status",
+      "Connessione…": "Connecting…",
+      "Anteprima live · 52 × 16": "Live preview · 52 × 16",
+      "La stessa immagine inviata al display.": "The same image sent to the display.",
+      "Anteprima corrente del TC002": "Current TC002 preview",
+      "In riproduzione": "Now showing",
+      "Caricamento": "Loading",
+      "Caricamento…": "Loading…",
+      "Schermata precedente": "Previous screen",
+      "Mostra nuovamente la schermata corrente": "Show the current screen again",
+      "Ripubblica": "Show again",
+      "Schermata successiva": "Next screen",
+      "A colpo d’occhio": "At a glance",
+      "Il tuo display": "Your display",
+      "Aggiorna ora": "Refresh now",
+      "Verifica…": "Checking…",
+      "Gestione del display": "Display management",
+      "Schermate": "Screens",
+      "Dispositivo": "Device",
+      "Diagnostica": "Diagnostics",
+      "Con il layout a due righe puoi scegliere il titolo di ogni app. Usa un testo breve: i titoli lunghi vengono abbreviati. Un campo vuoto ripristina il titolo automatico.": "With the two-line layout you can choose each app title. Keep it short: long titles are shortened. An empty field restores the automatic title.",
+      "Attiva, riordina o mostra subito un’app. Per rimuoverla dalla rotazione, spegni l’interruttore e salva l’ordine.": "Enable, reorder or show an app immediately. To remove it from rotation, turn off its switch and save the order.",
+      "Salva schermate": "Save screens",
+      "Telecomando": "Remote control",
+      "Modalità Sonos": "Sonos mode",
+      "Tieni premuta la ghiera per entrare o uscire. In modalità Sonos il carosello resta fermo.": "Hold the knob to enter or leave. The carousel pauses while Sonos mode is active.",
+      "Abilita modalità Sonos": "Enable Sonos mode",
+      "Consente alla pressione lunga della ghiera di attivare il telecomando.": "Allows a long knob press to activate the remote.",
+      "Scatto volume (%)": "Volume step (%)",
+      "Playlist, preferito o URI da avviare": "Playlist, favorite or URI to start",
+      "es. spotify:playlist:… oppure S:/MiaPlaylist": "e.g. spotify:playlist:… or S:/MyPlaylist",
+      "Al primo clic di ogni sessione Sonos, questo contenuto viene caricato. Se lasci vuoto, il clic esegue play/pausa.": "The first click in each Sonos session loads this content. If left empty, the click toggles play/pause.",
+      "Tipo contenuto": "Content type",
+      "Pressione lunga (ms)": "Long press (ms)",
+      "La modalità Sonos non è attiva.": "Sonos mode is not active.",
+      "Brano precedente": "Previous track",
+      "Play / Pausa": "Play / Pause",
+      "Brano successivo": "Next track",
+      "Attiva ora": "Activate now",
+      "Salva Sonos": "Save Sonos",
+      "Crea schermate statiche o collegate a un’entità Home Assistant, senza scrivere YAML.": "Create static screens or connect them to a Home Assistant entity without writing YAML.",
+      "＋ Nuova app": "＋ New app",
+      "Anteprima app": "App preview",
+      "52 × 16 · dati di esempio": "52 × 16 · sample data",
+      "Anteprima dell’app personalizzata": "Custom app preview",
+      "Completa i campi per vedere l’anteprima.": "Complete the fields to see the preview.",
+      "Verifico l’accesso a Home Assistant…": "Checking Home Assistant access…",
+      "Modello grafico": "Display template",
+      "Come il display": "Use display settings",
+      "Usa le impostazioni generali": "Uses the global settings",
+      "In evidenza": "Focus",
+      "Valore grande, spazio adattivo": "Large value, adaptive sizing",
+      "Titolo e valore": "Title and value",
+      "Due righe ben distinte": "Two clearly separated lines",
+      "Il modello cambia solo questa app. Contenuto e colori restano personalizzabili.": "The template changes only this app. Content and colours remain customizable.",
+      "Titolo breve sul display": "Short display title",
+      "es. CASA, CO2, ENERGIA": "e.g. HOME, CO2, ENERGY",
+      "Se vuoto, viene usato il nome dell’app. I titoli lunghi vengono abbreviati.": "If empty, the app name is used. Long titles are shortened.",
+      "Nome app": "App name",
+      "es. studio_temperatura": "e.g. studio_temperature",
+      "Contenuto": "Content",
+      "Testo statico": "Static text",
+      "Sensore / entità Home Assistant": "Home Assistant sensor / entity",
+      "Meteo": "Weather",
+      "Previsione pioggia": "Rain forecast",
+      "Calendario": "Calendar",
+      "Lista Todo": "Todo list",
+      "Formato personalizzato": "Custom format",
+      "es. Temperatura {value} {unit}": "e.g. Temperature {value} {unit}",
+      "Variabili disponibili: {value}, {unit}, {state}.": "Available variables: {value}, {unit}, {state}.",
+      "Data e ora evento": "Event date and time",
+      "Titolo": "Title",
+      "Testo a scadenza": "Text when reached",
+      "Mostra titolo": "Show title",
+      "Mostra secondi": "Show seconds",
+      "Lingua descrizione": "Description language",
+      "Italiano": "Italian",
+      "Inglese": "English",
+      "Condizione meteo": "Weather condition",
+      "Temperatura": "Temperature",
+      "Vento": "Wind",
+      "Umidità": "Humidity",
+      "Icona meteo dinamica": "Dynamic weather icon",
+      "Cambia automaticamente con la condizione di Home Assistant; l’icona manuale resta come fallback.": "Changes automatically with the Home Assistant condition; the manual icon remains as a fallback.",
+      "Grafico": "Chart",
+      "Barre": "Bars",
+      "Linea": "Line",
+      "Colore grafico": "Chart colour",
+      "Scala automatica": "Automatic scale",
+      "Ore future": "Hours ahead",
+      "Numero massimo": "Maximum items",
+      "Testo lista vuota": "Empty-list text",
+      "Mostra anche se vuota": "Show when empty",
+      "Testo": "Text",
+      "Testo da mostrare": "Text to display",
+      "ID entità": "Entity ID",
+      "sensor.temperatura_soggiorno": "sensor.living_room_temperature",
+      "Attributo (opzionale)": "Attribute (optional)",
+      "es. media_title": "e.g. media_title",
+      "Prefisso": "Prefix",
+      "es. Casa": "e.g. Home",
+      "Unità/suffisso": "Unit/suffix",
+      "automatico": "automatic",
+      "Decimali": "Decimals",
+      "Automatici": "Automatic",
+      "Mostra solo quando (opzionale)": "Show only when (optional)",
+      "es. playing oppure on": "e.g. playing or on",
+      "Valore anteprima": "Preview value",
+      "es. 21.5": "e.g. 21.5",
+      "Unità dall’entità": "Unit from entity",
+      "Usata se il suffisso è vuoto.": "Used when the suffix is empty.",
+      "Unità automatica": "Automatic unit",
+      "Nascondi se non disponibile": "Hide when unavailable",
+      "Evita schermate con dati mancanti.": "Avoids screens with missing data.",
+      "Nascondi dato non disponibile": "Hide unavailable data",
+      "Icona GIF/JPG": "GIF/JPG icon",
+      "Nessuna icona": "No icon",
+      "Carica": "Upload",
+      "Dimensione testo": "Text size",
+      "Grande": "Large",
+      "Piccolo": "Small",
+      "Formato testo": "Text case",
+      "Come scritto": "As entered",
+      "Maiuscolo": "Uppercase",
+      "Impostazione globale": "Global setting",
+      "Movimento icona": "Icon movement",
+      "Fissa": "Fixed",
+      "Scorre una volta": "Scroll once",
+      "Scorre con il testo": "Scroll with text",
+      "Unità personalizzata": "Custom unit",
+      "es. kWh": "e.g. kWh",
+      "Importa dalla galleria LaMetric": "Import from the LaMetric gallery",
+      "Apri galleria ↗": "Open gallery ↗",
+      "ID icona": "Icon ID",
+      "es. 54313": "e.g. 54313",
+      "Fedele 2×": "Faithful 2×",
+      "Ottimizzata TC002": "TC002 optimized",
+      "Fedele usa 16×16 pixel. Ottimizzata TC002 comprime simmetricamente l’icona a 12×16, lasciando quattro pixel in più al testo. La modalità scelta sostituisce la variante precedente.": "Faithful uses 16×16 pixels. TC002 optimized symmetrically compresses the icon to 12×16, leaving four more pixels for text. The selected mode replaces the previous variant.",
+      "Colore testo": "Text colour",
+      "Colore sfondo": "Background colour",
+      "Colorazione": "Colour mode",
+      "Tinta unita": "Solid colour",
+      "Gradiente": "Gradient",
+      "Arcobaleno": "Rainbow",
+      "Secondo colore": "Second colour",
+      "Soglia": "Threshold",
+      "Colori per soglia": "Threshold colours",
+      "Sotto soglia": "Below threshold",
+      "Da soglia in su": "At or above threshold",
+      "Durata (secondi)": "Duration (seconds)",
+      "Scorrimento (ms/pixel)": "Scroll speed (ms/pixel)",
+      "Pausa (ms)": "Pause (ms)",
+      "Ripetizioni": "Repeats",
+      "Scadenza (secondi)": "Expiry (seconds)",
+      "Alla scadenza": "On expiry",
+      "Rimuovi": "Remove",
+      "Segna scaduta": "Mark expired",
+      "Sfondo animato": "Animated background",
+      "Nessuno": "None",
+      "Effetto in primo piano": "Foreground effect",
+      "Pioggia": "Rain",
+      "Neve": "Snow",
+      "Pioggerella": "Drizzle",
+      "Tempesta": "Storm",
+      "Fulmini": "Lightning",
+      "Gelo": "Frost",
+      "Scorrimento testo": "Text scrolling",
+      "Se disattivato, il testo resta fermo.": "When disabled, the text remains still.",
+      "Mostra quando cambia": "Show when changed",
+      "Porta subito l’app sul display.": "Immediately brings the app to the display.",
+      "Centra il testo": "Centre text",
+      "Quando entra nello spazio disponibile.": "When it fits in the available space.",
+      "App attiva": "App enabled",
+      "La inserisce nel carousel.": "Includes it in the carousel.",
+      "Annulla": "Cancel",
+      "Salva app": "Save app",
+      "Salva e mostra": "Save and show",
+      "Le mie app": "My apps",
+      "Display": "Display",
+      "Sistema · TC002": "System · TC002",
+      "Centro impostazioni": "Settings center",
+      "Stato del dispositivo, connettività e funzioni disponibili.": "Device status, connectivity and available features.",
+      "Questa pagina gira sul bridge esterno. Le impostazioni qui sotto controllano il bridge e la sua uscita sul pannello; la configurazione del Linux stock rimane separata fino all’installazione di un runtime locale qualificato.": "This page runs on the external bridge. The controls below configure the bridge and its panel output; stock Linux configuration remains separate until a qualified local runtime is installed.",
+      "Disponibile ora": "Available now",
+      "Schermo e aspetto": "Screen and appearance",
+      "Luminosità, accensione, font, layout, effetti e transizioni.": "Brightness, power, font, layout, effects and transitions.",
+      "Apri controlli display": "Open display controls",
+      "Ora e schermate": "Time and screens",
+      "Formato dell’ora, durata delle app e velocità di scorrimento. Il fuso orario proviene dalla configurazione del bridge.": "Time format, app duration and scrolling speed. Time zone comes from bridge configuration.",
+      "Apri controlli ora e app": "Open time and app controls",
+      "Audio e manopola": "Audio and knob",
+      "Volume locale, feedback della ghiera e modalità Sonos. Disponibilità audio secondo l’adapter.": "Local volume, knob feedback and Sonos mode. Audio availability depends on the adapter.",
+      "Apri controlli audio": "Open audio controls",
+      "Firmware stock": "Stock firmware",
+      "Rete Wi‑Fi": "Wi-Fi network",
+      "Il bridge non configura le credenziali Wi‑Fi del TC002. Usa la configurazione Ulanzi stock; il primo setup del futuro runtime locale è ancora da qualificare.": "The bridge cannot configure TC002 Wi-Fi credentials. Use stock Ulanzi setup; first setup of a future local runtime still needs qualification.",
+      "Stato rete non disponibile": "Network status unavailable",
+      "Guida Ulanzi Wi‑Fi ↗": "Ulanzi Wi-Fi guide ↗",
+      "Configurazione bridge": "Bridge configuration",
+      "MQTT e Home Assistant": "MQTT and Home Assistant",
+      "Broker, credenziali, TLS e discovery sono impostati nella configurazione del bridge o dell’add-on Home Assistant. Nessuna password viene mostrata qui.": "Broker, credentials, TLS and discovery are set in the bridge or Home Assistant add-on configuration. No password is shown here.",
+      "Stato broker non disponibile": "Broker status unavailable",
+      "Esempio configurazione bridge ↗": "Bridge configuration example ↗",
+      "In qualificazione": "Under qualification",
+      "Accesso, aggiornamenti e recupero": "Access, updates and recovery",
+      "Account locale, provisioning, aggiornamento e ripristino non sono controlli disponibili sul TC002 attuale. Non eseguire reset o flash da questa pagina.": "Local accounts, provisioning, updates and recovery are not controls available on the current TC002. Do not reset or flash from this page.",
+      "Companion temporaneo": "Temporary companion",
+      "Fuso orario e servizi": "Time zone and services",
+      "Il fuso orario viene caricato all’avvio del bridge. NTP, dimmer notturno, mDNS e metriche sul TC002 richiedono il runtime locale e prove hardware.": "The time zone loads when the bridge starts. NTP, night dimming, mDNS and device metrics require the local runtime and hardware checks.",
+      "Notifiche e integrazioni": "Notifications and integrations",
+      "Notifiche, moodlight, indicatori, app personalizzate e Sonos sono gestiti dal bridge.": "Notifications, moodlight, indicators, custom apps and Sonos are managed by the bridge.",
+      "Apri strumenti AWTRIX": "Open AWTRIX tools",
+      "Configurazione autonoma": "Standalone setup",
+      "Un TC002 nuovo dovrà poter impostare rete e accesso senza Home Assistant. La procedura fisica protetta e il recupero da credenziali errate non sono ancora verificati.": "A new TC002 must be able to set up networking and access without Home Assistant. Protected physical setup and recovery from wrong credentials have not yet been verified.",
+      "Display, ora e audio": "Display, time and audio",
+      "Broker connesso": "Broker connected",
+      "Broker non connesso": "Broker disconnected",
+      "MQTT disattivato": "MQTT disabled",
+      "TC002 raggiungibile; stato Wi-Fi non verificato": "TC002 reachable; Wi-Fi status unverified",
+      "TC002 non raggiungibile; stato Wi-Fi non verificato": "TC002 unreachable; Wi-Fi status unverified",
+      "Companion UDP temporaneo": "Temporary UDP companion",
+      "Adapter HTTP stock": "Stock HTTP adapter",
+      "Le modifiche vengono salvate nel bridge.": "Changes are saved in the bridge.",
+      "Luminosità": "Brightness",
+      "Volume locale TC002": "Local TC002 volume",
+      "Formato ora": "Time format",
+      "Scegli il formato usato dalla schermata Ora.": "Choose the format used by the Time screen.",
+      "Dimensione Ora e Data": "Time and Date size",
+      "Piccolo · Scientifica": "Small · Scientifica",
+      "Grande · Silkscreen 2×": "Large · Silkscreen 2×",
+      "Piccolo mantiene la resa Scientifica attuale. Grande usa le cifre Silkscreen classiche.": "Small keeps the current Scientifica rendering. Large uses the classic Silkscreen digits.",
+      "Silkscreen · classico": "Silkscreen · classic",
+      "Scientifica · minuscolo": "Scientifica · lowercase",
+      "Scientifica · corsivo": "Scientifica · italic",
+      "AWTRIX · fedele 1×": "AWTRIX · faithful 1×",
+      "AWTRIX · fedele 2×": "AWTRIX · faithful 2×",
+      "Scientifica è un font bitmap nativo a 11 pixel; AWTRIX usa i glifi originali in scala 1× o 2×.": "Scientifica is a native 11-pixel bitmap font; AWTRIX uses the original glyphs at 1× or 2× scale.",
+      "Layout app": "App layout",
+      "Una riga · testo grande": "One line · large text",
+      "Due righe · titolo + valore": "Two lines · title + value",
+      "Con Silkscreen, il titolo resta fermo in alto e soltanto il valore scorre quando serve.": "With Silkscreen, the title remains fixed at the top and only the value scrolls when needed.",
+      "Durata app (secondi)": "App duration (seconds)",
+      "Passaggi titolo Musica": "Music title passes",
+      "Quante volte scorre il titolo nella seconda riga.": "How many times the title scrolls on the second line.",
+      "Pausa iniziale (ms)": "Initial pause (ms)",
+      "Durata transizione (ms)": "Transition duration (ms)",
+      "Transizione": "Transition",
+      "Effetto sovrapposto": "Overlay effect",
+      "Avanzamento automatico": "Automatic rotation",
+      "Ruota le app dopo la durata impostata.": "Rotates apps after the configured duration.",
+      "Animazione transizione": "Transition animation",
+      "Sfuma il passaggio tra una schermata e la successiva.": "Animates the change from one screen to the next.",
+      "Suono ghiera": "Knob sound",
+      "Riproduce un breve feedback audio a ogni scatto.": "Plays brief audio feedback at every detent.",
+      "Feedback audio della ghiera": "Knob audio feedback",
+      "Testo maiuscolo": "Uppercase text",
+      "Si applica quando l’app non forza il formato.": "Used when the app does not override the text case.",
+      "Display acceso": "Display on",
+      "Spegne o riaccende la matrice senza fermare il bridge.": "Turns the matrix off or on without stopping the bridge.",
+      "Salva impostazioni": "Save settings",
+      "Notifiche e controlli dispositivo": "Notifications and device controls",
+      "Funzioni derivate dai blueprint: notifiche, moodlight e indicatori. La durata globale si imposta qui sopra; le app sono nella scheda Schermate.": "Blueprint-derived notifications, moodlight and indicators. Set the global duration above; apps are in the Screens tab.",
+      "Notifica": "Notification",
+      "Messaggio": "Message",
+      "Icona (opzionale)": "Icon (optional)",
+      "nome icona": "icon name",
+      "Suono MP3 (opzionale)": "MP3 sound (optional)",
+      "es. volume": "e.g. volume",
+      "Colore": "Colour",
+      "Mantieni finché rimossa": "Keep until dismissed",
+      "Accoda alle notifiche": "Queue with notifications",
+      "Rimuovi notifica": "Dismiss notification",
+      "Invia notifica": "Send notification",
+      "Attiva moodlight": "Enable moodlight",
+      "Temperatura colore Kelvin (0 = usa il colore)": "Colour temperature in Kelvin (0 = use colour)",
+      "Applica moodlight": "Apply moodlight",
+      "Indicatori laterali": "Side indicators",
+      "Indicatore 1": "Indicator 1",
+      "Indicatore 2": "Indicator 2",
+      "Indicatore 3": "Indicator 3",
+      "Lampeggio indicatore 1 in ms": "Indicator 1 blink time in ms",
+      "Lampeggio indicatore 2 in ms": "Indicator 2 blink time in ms",
+      "Lampeggio indicatore 3 in ms": "Indicator 3 blink time in ms",
+      "Il valore sotto ogni indicatore è il tempo di lampeggio in millisecondi; 0 significa luce fissa.": "The value below each indicator is its blink time in milliseconds; 0 means steady light.",
+      "Applica indicatori": "Apply indicators",
+      "Informazioni sul collegamento": "Connection information",
+      "In attesa dello stato del collegamento.": "Waiting for connection status.",
+      "IP dispositivo": "Device IP",
+      "Non raggiungibile": "Unreachable",
+      "Connesso": "Connected",
+      "In attesa": "Waiting",
+      "Disattivato": "Disabled",
+      "Bridge attivo": "Bridge active",
+      "Companion UDP temporanea: senza frame il display diventa nero; la ricezione riprende automaticamente al ritorno del bridge.": "Temporary UDP companion: without frames the display turns black; reception resumes automatically when the bridge returns.",
+      "Il frame stock resta valido per {seconds} secondi durante le brevi interruzioni di rete.": "The stock frame remains valid for {seconds} seconds during brief network interruptions.",
+      "Modifiche non salvate": "Unsaved changes",
+      "{enabled} attive su {total}": "{enabled} active out of {total}",
+      "Nessuna schermata disponibile.": "No screens available.",
+      "nativa bridge": "bridge built-in",
+      "da Home Assistant": "from Home Assistant",
+      "in attesa dei dati": "waiting for data",
+      "Titolo riga superiore": "Top-line title",
+      "Titolo riga superiore · {name}": "Top-line title · {name}",
+      "Vuoto = titolo automatico": "Empty = automatic title",
+      "Layout a due righe: usa un titolo breve. Il testo lungo viene abbreviato per restare fisso.": "Two-line layout: use a short title. Long text is shortened so it remains fixed.",
+      "Disattiva dal carousel": "Disable in carousel",
+      "Attiva nel carousel": "Enable in carousel",
+      "Sposta prima": "Move up",
+      "Sposta dopo": "Move down",
+      "Mostra": "Show",
+      "Elimina dal bridge": "Delete from bridge",
+      "Elimina {name} dal bridge": "Delete {name} from the bridge",
+      "Nessuna app creata. Parti dal modulo qui accanto.": "No apps created yet. Start with the form beside this list.",
+      "Apri App Studio da Home Assistant.": "Open App Studio from Home Assistant.",
+      "testo statico": "static text",
+      "countdown locale": "local countdown",
+      "meteo": "weather",
+      "pioggia": "rain",
+      "calendario": "calendar",
+      "in attesa": "waiting",
+      "Errore": "Error",
+      "Attiva": "Active",
+      "Nascosta": "Hidden",
+      "Modifica": "Edit",
+      "Elimina": "Delete",
+      "Connesso a Home Assistant: le app dinamiche si aggiornano automaticamente ogni 2 secondi.": "Connected to Home Assistant: dynamic apps update automatically every 2 seconds.",
+      "Le app statiche funzionano; l’API Home Assistant non è disponibile per quelle dinamiche.": "Static apps work; the Home Assistant API is unavailable for dynamic apps.",
+      "Per sicurezza App Studio è disponibile solo da Home Assistant → TC002 AWTRIX Bridge → Apri interfaccia utente Web.": "For security, App Studio is available only from Home Assistant → TC002 AWTRIX Bridge → Open Web UI.",
+      "Anteprima aggiornata · non modifica il display": "Preview updated · does not change the display",
+      "Anteprima non disponibile: {error}": "Preview unavailable: {error}",
+      "App aggiornata": "App updated",
+      "App creata e salvata": "App created and saved",
+      "App eliminata": "App deleted",
+      "Eliminare definitivamente l’app {name}?": "Permanently delete the app {name}?",
+      "Icona caricata": "Icon uploaded",
+      "Bridge offline": "Bridge offline",
+      "Valori ricaricati": "Values reloaded",
+      "Nessun media_player disponibile": "No media_player available",
+      "Disabilitata": "Disabled",
+      "Pronta": "Ready",
+      "Esci dalla modalità": "Exit mode",
+      "Errore: {error}": "Error: {error}",
+      "{identity} — {title} · volume {volume}%": "{identity} — {title} · volume {volume}%",
+      "Non disponibile": "Unavailable",
+      "Impostazioni Sonos salvate": "Sonos settings saved",
+      "Impostazioni salvate": "Settings saved",
+      "Mostro {name}": "Showing {name}",
+      "Eliminare {name} dal bridge e cancellare il relativo comando MQTT mantenuto?": "Delete {name} from the bridge and clear its retained MQTT command?",
+      "{name} eliminata": "{name} deleted",
+      "Notifica inviata": "Notification sent",
+      "Notifica rimossa": "Notification dismissed",
+      "Moodlight aggiornata": "Moodlight updated",
+      "Indicatori aggiornati": "Indicators updated",
+      "Schermate e titoli salvati": "Screens and titles saved",
+      "Stato aggiornato": "Status refreshed",
+      "{label}: {frames} fotogrammi, {width}×{height}": "{label}: {frames} frames, {width}×{height}",
+      "Le previsioni di pioggia usano il loro layout a grafico.": "Rain forecasts use their chart layout.",
+      "Il titolo resta fermo in alto e soltanto il valore scorre quando serve.": "The title remains fixed at the top and only the value scrolls when needed.",
+      "Il layout a due righe è disponibile con AWTRIX fedele 1×, Silkscreen e Scientifica minuscolo.": "The two-line layout is available with AWTRIX faithful 1×, Silkscreen and lowercase Scientifica.",
+      "Ciao!": "Hello!",
+      "Ora!": "Now!",
+      "Nessun elemento": "No items",
+      "Ora": "Time",
+      "Data": "Date",
+      "Musica Sonos": "Sonos music",
+      "Umidita'": "Humidity",
+      "Energia oggi": "Energy today",
+      "Potenza": "Power",
+      "Temperatura casa": "Home temperature",
+      "Compleanno": "Birthday",
+    };
+
+    let interfaceLanguage = "it";
+    const sourceText = new WeakMap();
+    const sourceAttributes = new WeakMap();
+
+    function t(source, values = {}) {
+      const translated = interfaceLanguage === "en" ? (ENGLISH[source] || source) : source;
+      return translated.replace(/\{([a-zA-Z]+)\}/g, (match, key) => (
+        Object.hasOwn(values, key) ? String(values[key]) : match
+      ));
+    }
+
+    function translateStaticUi() {
+      document.documentElement.lang = interfaceLanguage;
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        if (node.parentElement?.closest("script, style")) continue;
+        if (!sourceText.has(node)) sourceText.set(node, node.nodeValue);
+        const source = sourceText.get(node);
+        const match = source.match(/^(\s*)(.*?)(\s*)$/s);
+        if (match && match[2]) node.nodeValue = `${match[1]}${t(match[2])}${match[3]}`;
+      }
+      document.querySelectorAll("[title], [aria-label], [placeholder]").forEach((element) => {
+        if (!sourceAttributes.has(element)) {
+          sourceAttributes.set(element, Object.fromEntries(
+            ["title", "aria-label", "placeholder"]
+              .filter(name => element.hasAttribute(name))
+              .map(name => [name, element.getAttribute(name)]),
+          ));
+        }
+        for (const [name, source] of Object.entries(sourceAttributes.get(element))) {
+          element.setAttribute(name, t(source));
+        }
+      });
+      $("interfaceLanguage").value = interfaceLanguage;
+    }
+
+    function preferredLanguage() {
+      try {
+        const saved = localStorage.getItem("tc002-interface-language");
+        if (["it", "en"].includes(saved)) return saved;
+      } catch (_error) {
+        // Storage can be unavailable in hardened embedded browsers.
+      }
+      return navigator.language?.toLowerCase().startsWith("it") ? "it" : "en";
+    }
+
+    function setInterfaceLanguage(language, persist = true) {
+      interfaceLanguage = language === "en" ? "en" : "it";
+      if (persist) {
+        try {
+          localStorage.setItem("tc002-interface-language", interfaceLanguage);
+        } catch (_error) {
+          // The selected language still applies to this page load.
+        }
+      }
+      translateStaticUi();
+      $("studioAccess").textContent = t(state.studioAccessMessage);
+      $("studioAccess").classList.toggle("error", state.studioAccessError);
+      $("studioPreviewStatus").textContent = t(
+        state.studioPreviewMessage, state.studioPreviewValues,
+      );
+      const emptyIcon = [...$("studioIcon").options].find(option => option.value === "");
+      if (emptyIcon) emptyIcon.textContent = t("Nessuna icona");
+      if ($("sonosPlayer").options.length === 1 && !$("sonosPlayer").options[0].value) {
+        $("sonosPlayer").options[0].textContent = t("Nessun media_player disponibile");
+      }
+      if (state.device) renderDevice(state.device);
+      if (state.settings && state.display) populateSettings();
+      renderApps();
+      renderStudioList();
+      if (state.sonos) renderSonos(state.sonos);
+      syncTemplatePicker();
+    }
+
+    const friendlyNames = {
+      Time: "Ora",
+      Date: "Data",
+      MusicaSonos: "Musica Sonos",
+      CasaViva: "Casa Viva",
+      sensor_awtrix_co2: "CO₂",
+      sensor_awtrix_pm2_5: "PM2.5",
+      sensor_awtrix_umidita: "Umidita'",
+      sensor_energia_attiva_prelevata_: "Energia oggi",
+      sensor_homey_alfa_measure_power: "Potenza",
+      sensor_smart_thermostat_x_temper: "Temperatura casa",
+      weather_meteo_home: "Meteo",
+      birthday: "Compleanno",
+      mediaplayer: "Musica Sonos",
+      SonosControl: "Modalità Sonos",
+    };
+
+    function friendlyName(name) {
+      if (friendlyNames[name]) return t(friendlyNames[name]);
+      return name
+        .replace(/^sensor[._-]?/i, "")
+        .replace(/[_-]+/g, " ")
+        .replace(/([a-zà-öø-ÿ])([A-Z])/g, "$1 $2")
+        .replace(/^./, (letter) => letter.toUpperCase());
+    }
+
+    function apiUrl(path) {
+      return new URL(path.replace(/^\/+/, ""), document.baseURI).toString();
+    }
+
+    async function request(path, { method = "GET", body, timeoutMs = 10000 } = {}) {
+      const headers = { Accept: "application/json" };
+      let wireMethod = method;
+      if (["PATCH", "PUT", "DELETE"].includes(method)) {
+        wireMethod = "POST";
+        headers["X-HTTP-Method-Override"] = method;
+      }
+      const options = { method: wireMethod, headers, cache: "no-store", signal: AbortSignal.timeout(timeoutMs) };
+      if (body !== undefined) {
+        headers["Content-Type"] = "application/json";
+        options.body = JSON.stringify(body);
+      }
+      const response = await fetch(apiUrl(path), options);
+      const contentType = response.headers.get("content-type") || "";
+      const payload = contentType.includes("application/json")
+        ? await response.json()
+        : await response.text();
+      if (!response.ok) {
+        const message = payload?.error?.message || payload?.message || `HTTP error ${response.status}`;
+        throw new Error(message);
+      }
+      return payload;
+    }
+
+    function showToast(message, error = false) {
+      const toast = $("toast");
+      clearTimeout(state.toastTimer);
+      toast.textContent = message;
+      toast.classList.toggle("error", error);
+      toast.classList.add("visible");
+      state.toastTimer = setTimeout(() => toast.classList.remove("visible"), 3000);
+    }
+
+    function setDot(id, kind) {
+      $(id).className = `dot ${kind || ""}`.trim();
+    }
+
+    function setBusy(value) {
+      state.busy = value;
+      document.querySelectorAll("button").forEach((button) => {
+        if (value) {
+          button.dataset.disabledBeforeBusy = button.disabled ? "true" : "false";
+          button.disabled = true;
+        } else if (button.dataset.disabledBeforeBusy !== undefined) {
+          button.disabled = button.dataset.disabledBeforeBusy === "true";
+          delete button.dataset.disabledBeforeBusy;
+        }
+      });
+      $("saveApps").disabled = value || !state.appsDirty;
+      if (!value && state.sonos) renderSonos(state.sonos);
+    }
+
+    function drawScreen(screen, canvasId = "screen") {
+      if (!screen || !Array.isArray(screen.pixels)) return;
+      const canvas = $(canvasId);
+      if (canvas.width !== screen.width || canvas.height !== screen.height) {
+        canvas.width = screen.width;
+        canvas.height = screen.height;
+      }
+      const context = canvas.getContext("2d", { alpha: false });
+      const image = context.createImageData(screen.width, screen.height);
+      for (let index = 0; index < screen.pixels.length; index += 1) {
+        const color = Number(screen.pixels[index]) >>> 0;
+        const offset = index * 4;
+        image.data[offset] = (color >> 16) & 255;
+        image.data[offset + 1] = (color >> 8) & 255;
+        image.data[offset + 2] = color & 255;
+        image.data[offset + 3] = 255;
+      }
+      context.putImageData(image, 0, 0);
+    }
+
+    function renderDevice(device) {
+      state.device = device;
+      $("currentApp").textContent = friendlyName(device.currentApp || "—");
+      $("currentApp").classList.remove("skeleton");
+      $("statusBrightness").textContent = `${device.brightness ?? "—"} / 255`;
+      $("bridgeVersion").textContent = `v${device.version || "—"}`;
+
+      const adapterOnline = Boolean(device.adapter?.connected);
+      setDot("deviceDot", adapterOnline ? "ok" : "bad");
+      $("deviceStatus").textContent = adapterOnline
+        ? `Online ${device.adapter?.transport || ""}`
+        : t("Non raggiungibile");
+
+      const mqttEnabled = Boolean(device.mqtt?.enabled);
+      const mqttOnline = Boolean(device.mqtt?.connected);
+      setDot("mqttDot", mqttOnline ? "ok" : mqttEnabled ? "warn" : "");
+      $("mqttStatus").textContent = mqttOnline ? t("Connesso") : mqttEnabled ? t("In attesa") : t("Disattivato");
+      $("settingsMqttState").textContent = mqttOnline
+        ? t("Broker connesso") : mqttEnabled ? t("Broker non connesso") : t("MQTT disattivato");
+      $("settingsWifiState").textContent = adapterOnline
+        ? t("TC002 raggiungibile; stato Wi-Fi non verificato")
+        : t("TC002 non raggiungibile; stato Wi-Fi non verificato");
+      $("settingsRuntimeState").textContent = device.bridge?.adapterMode === "udp"
+        ? t("Companion UDP temporaneo") : t("Adapter HTTP stock");
+
+      setDot("bridgeDot", adapterOnline && mqttOnline ? "ok" : adapterOnline ? "warn" : "bad");
+      $("bridgeStatus").textContent = adapterOnline ? t("Bridge attivo") : "TC002 offline";
+
+      const frameLifetime = device.bridge?.frameLifetimeSeconds;
+      $("frameLifetimeNote").textContent = device.bridge?.adapterMode === "udp"
+        ? t("Companion UDP temporanea: senza frame il display diventa nero; la ricezione riprende automaticamente al ritorno del bridge.")
+        : t("Il frame stock resta valido per {seconds} secondi durante le brevi interruzioni di rete.", {seconds: frameLifetime ?? "—"});
+      $("detailHost").textContent = device.bridge?.deviceHost || device.ipAddress || "—";
+      $("detailHttpApp").textContent = device.bridge?.httpApp || "—";
+      $("detailRenderer").textContent = device.bridge?.rendererMode || "—";
+      $("detailPrefix").textContent = device.mqtt?.prefix || "—";
+      if (!$("indicatorsForm").contains(document.activeElement)) {
+        (device.indicators || []).slice(0, 3).forEach((indicator, index) => {
+          const number = index + 1;
+          $(`toolIndicator${number}Enabled`).checked = Boolean(indicator.on);
+          $(`toolIndicator${number}Color`).value = (indicator.color || "#ffffff").toLowerCase();
+          $(`toolIndicator${number}Blink`).value = String(indicator.blinkMs || 0);
+        });
+      }
+    }
+
+    function populateSettings() {
+      const settings = state.settings;
+      const display = state.display;
+      if (!settings || !display) return;
+      $("brightness").value = settings.brightness;
+      $("brightnessValue").value = `${settings.brightness} / 255`;
+      $("volume").value = settings.mp3Volume;
+      $("volumeValue").value = `${settings.mp3Volume} / 100`;
+      $("duration").value = settings.appDurationMs > 0
+        ? Math.max(1, Math.round(settings.appDurationMs / 1000))
+        : 10;
+      $("autoRotate").checked = settings.appDurationMs > 0;
+      $("duration").disabled = !$("autoRotate").checked;
+      $("scrollSpeed").value = settings.scroll?.speed ?? 100;
+      $("scrollHold").value = settings.scroll?.holdMs ?? 1000;
+      $("musicTitleScrollRepeats").value = settings.musicTitleScrollRepeats ?? 3;
+      $("timeFormat").value = !settings.time24h
+        ? "hhmm_ampm"
+        : settings.timeShowSeconds
+          ? "hhmmss"
+          : "hhmm";
+      $("fontFamily").value = settings.fontFamily ?? "scientifica";
+      $("timeDateFontSize").value = settings.timeDateFontSize ?? "small";
+      $("displayLayout").value = settings.displayLayout ?? "singleLine";
+      syncDisplayLayout();
+      $("transitionDuration").value = settings.transitionDurationMs;
+      $("autoTransition").checked = Boolean(settings.autoTransition);
+      $("knobSoundEnabled").checked = settings.knobSoundEnabled !== false;
+      $("uppercase").checked = Boolean(settings.uppercase);
+      $("displayPower").checked = Boolean(display.power);
+      $("overlay").value = display.overlay || "";
+      if (!$("moodlightForm").contains(document.activeElement)) {
+        const moodlight = display.moodlight;
+        $("toolMoodlightEnabled").checked = Boolean(moodlight);
+        $("toolMoodlightColor").value = (moodlight?.color || "#ffffff").toLowerCase();
+        $("toolMoodlightBrightness").value = String(moodlight?.brightness ?? 100);
+        $("toolMoodlightKelvin").value = String(moodlight?.kelvin ?? 0);
+      }
+
+      const transition = $("transition");
+      const names = state.capabilities?.transitions || [settings.transitionEffect];
+      transition.replaceChildren(...names.map((name) => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name;
+        return option;
+      }));
+      transition.value = settings.transitionEffect;
+    }
+
+    function orderedApps(apps) {
+      return [...apps].sort((left, right) => {
+        const leftSlot = left.slot == null ? Number.MAX_SAFE_INTEGER : left.slot;
+        const rightSlot = right.slot == null ? Number.MAX_SAFE_INTEGER : right.slot;
+        return leftSlot - rightSlot || left.name.localeCompare(right.name);
+      });
+    }
+
+    function markAppsDirty() {
+      state.appsDirty = true;
+      $("saveApps").disabled = state.busy;
+      $("appsCount").textContent = t("Modifiche non salvate");
+    }
+
+    function moveApp(index, delta) {
+      const target = index + delta;
+      if (target < 0 || target >= state.apps.length) return;
+      [state.apps[index], state.apps[target]] = [state.apps[target], state.apps[index]];
+      markAppsDirty();
+      renderApps();
+    }
+
+    function renderApps() {
+      const list = $("appsList");
+      if (list.contains(document.activeElement) && document.activeElement.matches('input[type="text"]')) {
+        updateAppHighlights();
+        return;
+      }
+      list.replaceChildren();
+      if (!state.apps.length) {
+        const empty = document.createElement("p");
+        empty.className = "subtle";
+        empty.textContent = t("Nessuna schermata disponibile.");
+        list.append(empty);
+        return;
+      }
+
+      state.apps.forEach((app, index) => {
+        const row = document.createElement("div");
+        row.className = "app-row";
+        row.dataset.appName = app.name;
+        if (app.name === state.device?.currentApp) row.classList.add("current");
+        if (!app.present) row.classList.add("absent");
+
+        const order = document.createElement("div");
+        order.className = "app-order";
+        order.textContent = String(index + 1).padStart(2, "0");
+
+        const copy = document.createElement("div");
+        copy.className = "app-copy";
+        const title = document.createElement("strong");
+        title.textContent = friendlyName(app.name);
+        const subtitle = document.createElement("small");
+        const source = app.origin === "builtin"
+          ? t("nativa bridge")
+          : app.origin === "studio"
+            ? "App Studio"
+            : app.present
+              ? t("da Home Assistant")
+              : t("in attesa dei dati");
+        subtitle.textContent = `${app.name} · ${source}`;
+        copy.append(title, subtitle);
+        if (!["Time", "Date", "CasaViva"].includes(app.name)) {
+          const field = document.createElement("label");
+          field.className = "app-title-field";
+          const caption = document.createElement("span");
+          caption.textContent = t("Titolo riga superiore");
+          const input = document.createElement("input");
+          input.type = "text";
+          input.maxLength = 64;
+          input.autocomplete = "off";
+          input.placeholder = t("Vuoto = titolo automatico");
+          input.title = t("Layout a due righe: usa un titolo breve. Il testo lungo viene abbreviato per restare fisso.");
+          input.setAttribute("aria-label", t("Titolo riga superiore · {name}", {name: friendlyName(app.name)}));
+          input.value = state.titleEdits[app.name] ?? state.settings?.appTitles?.[app.name] ?? "";
+          input.addEventListener("input", () => {
+            state.titleEdits[app.name] = input.value;
+            markAppsDirty();
+          });
+          field.append(caption, input);
+          copy.append(field);
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "app-actions";
+
+        const enabled = document.createElement("label");
+        enabled.className = "switch";
+        enabled.title = app.enabled ? t("Disattiva dal carousel") : t("Attiva nel carousel");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = Boolean(app.enabled);
+        checkbox.addEventListener("change", () => {
+          app.enabled = checkbox.checked;
+          markAppsDirty();
+        });
+        const track = document.createElement("span");
+        enabled.append(checkbox, track);
+
+        const up = document.createElement("button");
+        up.className = "mini";
+        up.type = "button";
+        up.textContent = "↑";
+        up.title = t("Sposta prima");
+        up.disabled = index === 0;
+        up.addEventListener("click", () => moveApp(index, -1));
+
+        const down = document.createElement("button");
+        down.className = "mini";
+        down.type = "button";
+        down.textContent = "↓";
+        down.title = t("Sposta dopo");
+        down.disabled = index === state.apps.length - 1;
+        down.addEventListener("click", () => moveApp(index, 1));
+
+        const show = document.createElement("button");
+        show.className = "mini show";
+        show.type = "button";
+        show.textContent = t("Mostra");
+        show.disabled = !app.present || !app.enabled;
+        show.addEventListener("click", () => switchApp(app.name));
+
+        actions.append(enabled, up, down, show);
+        if (app.origin === "pushed" || app.origin == null) {
+          const remove = document.createElement("button");
+          remove.className = "mini delete";
+          remove.type = "button";
+          remove.textContent = "×";
+          remove.title = t("Elimina dal bridge");
+          remove.setAttribute("aria-label", t("Elimina {name} dal bridge", {name: friendlyName(app.name)}));
+          remove.addEventListener("click", () => deletePushedApp(app.name));
+          actions.append(remove);
+        }
+        row.append(order, copy, actions);
+        list.append(row);
+      });
+
+      if (!state.appsDirty) {
+        const enabledCount = state.apps.filter((app) => app.enabled).length;
+        $("appsCount").textContent = t("{enabled} attive su {total}", {
+          enabled: enabledCount, total: state.apps.length,
+        });
+      }
+      $("saveApps").disabled = state.busy || !state.appsDirty;
+    }
+
+    function updateAppHighlights() {
+      $("appsList").querySelectorAll(".app-row").forEach((row) => {
+        row.classList.toggle("current", row.dataset.appName === state.device?.currentApp);
+      });
+    }
+
+    function studioDefinitionFromForm() {
+      const enteredName = $("studioName").value.trim();
+      return {
+        name: enteredName || "studio_preview",
+        displayTemplate: $("studioDisplayTemplate").value,
+        displayTitle: $("studioDisplayTitle").value,
+        sourceType: $("studioSourceType").value,
+        staticText: $("studioStaticText").value,
+        entityId: $("studioEntityId").value.trim(),
+        attribute: $("studioAttribute").value.trim(),
+        prefix: $("studioPrefix").value,
+        suffix: $("studioSuffix").value,
+        useEntityUnit: $("studioUseEntityUnit").checked,
+        decimals: Number($("studioDecimals").value),
+        visibleWhen: $("studioVisibleWhen").value,
+        hideUnavailable: $("studioHideUnavailable").checked,
+        icon: $("studioIcon").value,
+        textColor: $("studioTextColor").value.toUpperCase(),
+        backgroundColor: $("studioBackgroundColor").value.toUpperCase(),
+        font: $("studioFont").value,
+        textCenter: $("studioTextCenter").checked,
+        durationMs: Number($("studioDuration").value) * 1000,
+        scrollSpeed: Number($("studioScrollSpeed").value),
+        scrollHoldMs: Number($("studioScrollHold").value),
+        effect: $("studioEffect").value,
+        overlay: $("studioOverlay").value,
+        enabled: $("studioEnabled").checked,
+        valueTemplate: $("studioValueTemplate").value,
+        unitOverride: $("studioUnitOverride").value,
+        textCase: $("studioTextCase").value,
+        iconMode: $("studioIconMode").value,
+        colorMode: $("studioColorMode").value,
+        gradientColor: $("studioGradientColor").value.toUpperCase(),
+        useThreshold: $("studioUseThreshold").checked,
+        thresholdValue: Number($("studioThresholdValue").value),
+        lowValueTextColor: $("studioLowColor").value.toUpperCase(),
+        highValueTextColor: $("studioHighColor").value.toUpperCase(),
+        repeat: Number($("studioRepeat").value),
+        lifetimeMs: Number($("studioLifetime").value) * 1000,
+        lifetimeExpiry: $("studioLifetimeExpiry").value,
+        switchOnChange: $("studioSwitchOnChange").checked,
+        scrollEnabled: $("studioScrollEnabled").checked,
+        targetDateTime: $("studioTargetDateTime").value,
+        countdownTitle: $("studioCountdownTitle").value,
+        showTitle: $("studioShowTitle").checked,
+        showSeconds: $("studioShowSeconds").checked,
+        reachedText: $("studioReachedText").value,
+        weatherLanguage: $("studioWeatherLanguage").value,
+        showWeatherText: $("studioShowWeatherText").checked,
+        showTemperature: $("studioShowTemperature").checked,
+        showWindSpeed: $("studioShowWindSpeed").checked,
+        showHumidity: $("studioShowHumidity").checked,
+        dynamicWeatherIcon: $("studioDynamicWeatherIcon").checked,
+        hoursAhead: Number($("studioHoursAhead").value),
+        maxItems: Number($("studioMaxItems").value),
+        emptyText: $("studioEmptyText").value,
+        showEmpty: $("studioShowEmpty").checked,
+        chartType: $("studioChartType").value,
+        chartAutoscale: $("studioChartAutoscale").checked,
+        chartColor: $("studioChartColor").value.toUpperCase(),
+      };
+    }
+
+    function showStudioSourceFields() {
+      const type = $("studioSourceType").value;
+      if (type === "rain") $("studioDisplayTemplate").value = "inherit";
+      syncTemplatePicker();
+      const needsEntity = ["entity", "weather", "rain", "calendar", "todo"].includes(type);
+      $("studioEntityFields").hidden = !needsEntity;
+      $("studioStaticFields").hidden = type !== "static";
+      $("studioTemplateField").hidden = type !== "entity";
+      $("studioCountdownFields").hidden = type !== "countdown";
+      $("studioWeatherFields").hidden = type !== "weather";
+      $("studioRainFields").hidden = type !== "rain";
+      $("studioListFields").hidden = !["calendar", "todo"].includes(type);
+      $("studioEntityId").required = needsEntity;
+      $("studioTargetDateTime").required = type === "countdown";
+      scheduleStudioPreview();
+    }
+
+    function setStudioAccess(allowed, message, error = false) {
+      state.studioAuthorized = allowed;
+      state.studioAccessMessage = message;
+      state.studioAccessError = error;
+      const banner = $("studioAccess");
+      banner.textContent = t(message);
+      banner.classList.toggle("error", error);
+      $("studioForm").querySelectorAll("input, select, button").forEach((control) => {
+        control.disabled = !allowed;
+      });
+      $("newStudioApp").disabled = !allowed;
+      if (allowed) { showStudioSourceFields(); loadTemplateGallery(); }
+    }
+
+    function resetStudioForm() {
+      state.studioEditingName = null;
+      $("studioForm").reset();
+      $("studioName").readOnly = false;
+      $("studioName").value = "";
+      $("studioSourceType").value = "static";
+      $("studioStaticText").value = t("Ciao!");
+      const target = new Date(Date.now() + 7 * 86400000);
+      $("studioTargetDateTime").value = target.toISOString().slice(0, 19);
+      $("studioSample").value = "123";
+      $("studioUseEntityUnit").checked = true;
+      $("studioHideUnavailable").checked = true;
+      $("studioTextColor").value = "#ffffff";
+      $("studioBackgroundColor").value = "#000000";
+      $("studioTextColorValue").value = "#FFFFFF";
+      $("studioBackgroundColorValue").value = "#000000";
+      $("studioFont").value = "large";
+      $("studioDuration").value = "10";
+      $("studioScrollSpeed").value = "85";
+      $("studioScrollHold").value = "1000";
+      $("studioTextCenter").checked = true;
+      $("studioEnabled").checked = true;
+      $("studioValueTemplate").value = "";
+      $("studioUnitOverride").value = "";
+      $("studioTextCase").value = "asTyped";
+      $("studioIconMode").value = "push";
+      $("studioColorMode").value = "solid";
+      $("studioGradientColor").value = "#00ffff";
+      $("studioUseThreshold").checked = false;
+      $("studioThresholdValue").value = "0";
+      $("studioLowColor").value = "#00ff7f";
+      $("studioHighColor").value = "#ff453a";
+      $("studioRepeat").value = "1";
+      $("studioLifetime").value = "0";
+      $("studioLifetimeExpiry").value = "remove";
+      $("studioSwitchOnChange").checked = false;
+      $("studioScrollEnabled").checked = true;
+      $("studioCountdownTitle").value = "Countdown";
+      $("studioShowTitle").checked = true;
+      $("studioShowSeconds").checked = true;
+      $("studioReachedText").value = t("Ora!");
+      $("studioWeatherLanguage").value = interfaceLanguage;
+      $("studioShowWeatherText").checked = true;
+      $("studioShowTemperature").checked = true;
+      $("studioShowWindSpeed").checked = false;
+      $("studioShowHumidity").checked = true;
+      $("studioDynamicWeatherIcon").checked = true;
+      $("studioHoursAhead").value = "24";
+      $("studioMaxItems").value = "3";
+      $("studioEmptyText").value = t("Nessun elemento");
+      $("studioShowEmpty").checked = true;
+      $("studioChartType").value = "barChart";
+      $("studioChartAutoscale").checked = true;
+      $("studioChartColor").value = "#4db8ff";
+      showStudioSourceFields();
+      renderStudioList();
+    }
+
+    function editStudioApp(app) {
+      selectWorkspaceTab("studio");
+      state.studioEditingName = app.name;
+      $("studioName").value = app.name;
+      $("studioName").readOnly = true;
+      $("studioSourceType").value = app.sourceType;
+      $("studioDisplayTemplate").value = app.displayTemplate || "inherit";
+      $("studioDisplayTitle").value = app.displayTitle || "";
+      $("studioStaticText").value = app.staticText;
+      $("studioEntityId").value = app.entityId;
+      $("studioAttribute").value = app.attribute;
+      $("studioPrefix").value = app.prefix;
+      $("studioSuffix").value = app.suffix;
+      $("studioUseEntityUnit").checked = app.useEntityUnit;
+      $("studioDecimals").value = String(app.decimals);
+      $("studioVisibleWhen").value = app.visibleWhen;
+      $("studioSample").value = app.lastRawValue ?? "123";
+      $("studioHideUnavailable").checked = app.hideUnavailable;
+      $("studioIcon").value = app.icon;
+      $("studioTextColor").value = app.textColor.toLowerCase();
+      $("studioBackgroundColor").value = app.backgroundColor.toLowerCase();
+      $("studioTextColorValue").value = app.textColor;
+      $("studioBackgroundColorValue").value = app.backgroundColor;
+      $("studioFont").value = app.font;
+      $("studioTextCenter").checked = app.textCenter;
+      $("studioDuration").value = String(app.durationMs / 1000);
+      $("studioScrollSpeed").value = String(app.scrollSpeed);
+      $("studioScrollHold").value = String(app.scrollHoldMs);
+      $("studioEffect").value = app.effect;
+      $("studioOverlay").value = app.overlay;
+      $("studioEnabled").checked = app.enabled;
+      $("studioValueTemplate").value = app.valueTemplate;
+      $("studioUnitOverride").value = app.unitOverride;
+      $("studioTextCase").value = app.textCase;
+      $("studioIconMode").value = app.iconMode;
+      $("studioColorMode").value = app.colorMode;
+      $("studioGradientColor").value = app.gradientColor.toLowerCase();
+      $("studioUseThreshold").checked = app.useThreshold;
+      $("studioThresholdValue").value = String(app.thresholdValue);
+      $("studioLowColor").value = app.lowValueTextColor.toLowerCase();
+      $("studioHighColor").value = app.highValueTextColor.toLowerCase();
+      $("studioRepeat").value = String(app.repeat);
+      $("studioLifetime").value = String(app.lifetimeMs / 1000);
+      $("studioLifetimeExpiry").value = app.lifetimeExpiry;
+      $("studioSwitchOnChange").checked = app.switchOnChange;
+      $("studioScrollEnabled").checked = app.scrollEnabled;
+      $("studioTargetDateTime").value = app.targetDateTime;
+      $("studioCountdownTitle").value = app.countdownTitle;
+      $("studioShowTitle").checked = app.showTitle;
+      $("studioShowSeconds").checked = app.showSeconds;
+      $("studioReachedText").value = app.reachedText;
+      $("studioWeatherLanguage").value = app.weatherLanguage;
+      $("studioShowWeatherText").checked = app.showWeatherText;
+      $("studioShowTemperature").checked = app.showTemperature;
+      $("studioShowWindSpeed").checked = app.showWindSpeed;
+      $("studioShowHumidity").checked = app.showHumidity;
+      $("studioDynamicWeatherIcon").checked = app.dynamicWeatherIcon;
+      $("studioHoursAhead").value = String(app.hoursAhead);
+      $("studioMaxItems").value = String(app.maxItems);
+      $("studioEmptyText").value = app.emptyText;
+      $("studioShowEmpty").checked = app.showEmpty;
+      $("studioChartType").value = app.chartType;
+      $("studioChartAutoscale").checked = app.chartAutoscale;
+      $("studioChartColor").value = app.chartColor.toLowerCase();
+      showStudioSourceFields();
+      renderStudioList();
+      $("studio").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function renderStudioList() {
+      const list = $("studioList");
+      list.replaceChildren();
+      $("studioCount").textContent = String(state.studioApps.length);
+      if (!state.studioApps.length) {
+        const empty = document.createElement("div");
+        empty.className = "studio-empty";
+        empty.textContent = state.studioAuthorized
+          ? t("Nessuna app creata. Parti dal modulo qui accanto.")
+          : t("Apri App Studio da Home Assistant.");
+        list.append(empty);
+        return;
+      }
+
+      state.studioApps.forEach((app) => {
+        const item = document.createElement("div");
+        item.className = "studio-item";
+        if (app.name === state.studioEditingName) item.classList.add("active");
+        const top = document.createElement("div");
+        top.className = "studio-item-top";
+        const copy = document.createElement("div");
+        copy.className = "studio-item-copy";
+        const title = document.createElement("strong");
+        title.textContent = friendlyName(app.name);
+        const detail = document.createElement("small");
+        const sourceLabels = {
+          static: t("testo statico"),
+          entity: app.entityId,
+          countdown: t("countdown locale"),
+          weather: `${t("meteo")} · ${app.entityId}`,
+          rain: `${t("pioggia")} · ${app.entityId}`,
+          calendar: `${t("calendario")} · ${app.entityId}`,
+          todo: `todo · ${app.entityId}`,
+        };
+        const source = sourceLabels[app.sourceType] || app.sourceType;
+        const value = app.lastValue || (app.sourceType === "static" ? app.staticText : t("in attesa"));
+        detail.textContent = `${source} · ${value}`;
+        copy.append(title, detail);
+        const badge = document.createElement("span");
+        badge.className = `studio-badge${app.lastError ? " error" : ""}`;
+        badge.textContent = app.lastError ? t("Errore") : app.present ? t("Attiva") : t("Nascosta");
+        badge.title = app.lastError || "";
+        top.append(copy, badge);
+
+        const actions = document.createElement("div");
+        actions.className = "studio-item-actions";
+        const edit = document.createElement("button");
+        edit.className = "btn";
+        edit.type = "button";
+        edit.textContent = t("Modifica");
+        edit.addEventListener("click", () => editStudioApp(app));
+        const show = document.createElement("button");
+        show.className = "btn";
+        show.type = "button";
+        show.textContent = t("Mostra");
+        show.disabled = !app.present || !app.enabled;
+        show.addEventListener("click", () => switchApp(app.name));
+        const remove = document.createElement("button");
+        remove.className = "btn danger";
+        remove.type = "button";
+        remove.textContent = t("Elimina");
+        remove.addEventListener("click", () => deleteStudioApp(app.name));
+        actions.append(edit, show, remove);
+        item.append(top, actions);
+        list.append(item);
+      });
+    }
+
+    async function loadStudioIcons(selected = null) {
+      try {
+        const listing = await request("api/v1/files?dir=/ICONS");
+        const select = $("studioIcon");
+        const current = selected ?? select.value;
+        const options = [new Option(t("Nessuna icona"), "")];
+        for (const file of listing.files || []) {
+          const stem = file.name.replace(/\.(gif|jpe?g)$/i, "");
+          options.push(new Option(file.name, stem));
+        }
+        select.replaceChildren(...options);
+        if ([...select.options].some((option) => option.value === current)) select.value = current;
+      } catch (error) {
+        showToast(`Icone: ${error.message}`, true);
+      }
+    }
+
+    async function loadStudio() {
+      try {
+        const document = await request("api/v1/studio/apps");
+        state.studioApps = document.apps || [];
+        const message = document.homeAssistantAvailable
+          ? "Connesso a Home Assistant: le app dinamiche si aggiornano automaticamente ogni 2 secondi."
+          : "Le app statiche funzionano; l’API Home Assistant non è disponibile per quelle dinamiche.";
+        setStudioAccess(true, message, !document.homeAssistantAvailable);
+        renderStudioList();
+      } catch (error) {
+        state.studioApps = [];
+        setStudioAccess(
+          false,
+          "Per sicurezza App Studio è disponibile solo da Home Assistant → TC002 AWTRIX Bridge → Apri interfaccia utente Web.",
+          true,
+        );
+        renderStudioList();
+      }
+    }
+
+    function scheduleStudioPreview() {
+      state.previewRevision = (state.previewRevision || 0) + 1;
+      clearTimeout(state.studioPreviewTimer);
+      state.studioPreviewTimer = setTimeout(renderStudioPreview, 160);
+    }
+
+    async function renderStudioPreview() {
+      if (!state.studioAuthorized || $("panel-studio").hidden || state.previewPending) return;
+      const revision = state.previewRevision;
+      state.previewPending = true;
+      try {
+        const preview = await request("api/v1/studio/preview", {
+          method: "POST",
+          body: { ...studioDefinitionFromForm(), sampleValue: $("studioSample").value },
+        });
+        if (revision !== state.previewRevision) return;
+        drawScreen(preview, "studioScreen");
+        $("studioScreen").style.opacity = "1";
+        state.studioPreviewMessage = "Anteprima aggiornata · non modifica il display";
+        state.studioPreviewValues = {};
+        $("studioPreviewStatus").textContent = t(state.studioPreviewMessage);
+      } catch (error) {
+        if (revision !== state.previewRevision) return;
+        $("studioScreen").style.opacity = ".25";
+        state.studioPreviewMessage = "Anteprima non disponibile: {error}";
+        state.studioPreviewValues = {error: error.message};
+        $("studioPreviewStatus").textContent = t(
+          state.studioPreviewMessage, state.studioPreviewValues,
+        );
+      } finally {
+        state.previewPending = false;
+      }
+    }
+
+    async function saveStudioApp(event) {
+      event.preventDefault();
+      if (!state.studioAuthorized || !$("studioForm").reportValidity()) return;
+      const showAfterSave = event.submitter?.value === "show";
+      const definition = studioDefinitionFromForm();
+      setBusy(true);
+      try {
+        const editing = state.studioEditingName;
+        const result = await request(
+          editing ? `api/v1/studio/apps/${encodeURIComponent(editing)}` : "api/v1/studio/apps",
+          { method: editing ? "PUT" : "POST", body: definition },
+        );
+        state.studioEditingName = result.name;
+        showToast(editing ? t("App aggiornata") : t("App creata e salvata"));
+        await Promise.all([loadStudio(), refreshLive()]);
+        if (showAfterSave && result.present && result.enabled) await switchApp(result.name);
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function deleteStudioApp(name) {
+      if (!window.confirm(t("Eliminare definitivamente l’app {name}?", {name: friendlyName(name)}))) return;
+      setBusy(true);
+      try {
+        await request(`api/v1/studio/apps/${encodeURIComponent(name)}`, { method: "DELETE" });
+        if (state.studioEditingName === name) resetStudioForm();
+        showToast(t("App eliminata"));
+        await Promise.all([loadStudio(), refreshLive()]);
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function uploadStudioIcon(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const form = new FormData();
+      form.append("file", file, file.name);
+      setBusy(true);
+      try {
+        const response = await fetch(apiUrl("api/v1/files"), { method: "POST", body: form });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload?.error?.message || `HTTP error ${response.status}`);
+        const stem = file.name.replace(/\.(gif|jpe?g)$/i, "");
+        await loadStudioIcons(stem);
+        showToast(t("Icona caricata"));
+        scheduleStudioPreview();
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        event.target.value = "";
+        setBusy(false);
+      }
+    }
+
+    async function importLametricIcon(mode) {
+      if (!state.studioAuthorized) return;
+      const input = $("studioLametricId");
+      const iconId = input.value.trim();
+      if (!input.reportValidity()) return;
+      setBusy(true);
+      try {
+        const result = await request("api/v1/studio/icons/lametric", {
+          method: "POST",
+          body: { iconId, mode },
+          timeoutMs: 45000,
+        });
+        await loadStudioIcons(result.iconName);
+        const label = result.mode === "tc002Optimized" ? t("Ottimizzata TC002") : t("Fedele 2×");
+        showToast(t("{label}: {frames} fotogrammi, {width}×{height}", {
+          label,
+          frames: result.frames,
+          width: result.width,
+          height: result.height,
+        }));
+        scheduleStudioPreview();
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function refreshLive() {
+      try {
+        const [device, screen] = await Promise.all([
+          request("api/v1/device"),
+          request("api/v1/display/screen"),
+        ]);
+        renderDevice(device);
+        drawScreen(screen);
+        if (!state.appsDirty) {
+          const apps = await request("api/v1/apps");
+          state.apps = orderedApps(apps);
+          renderApps();
+        } else {
+          updateAppHighlights();
+        }
+      } catch (error) {
+        setDot("bridgeDot", "bad");
+        $("bridgeStatus").textContent = t("Bridge offline");
+      }
+    }
+
+    async function loadConfiguration(showMessage = false) {
+      try {
+        const [settings, display, capabilities] = await Promise.all([
+          request("api/v1/settings"),
+          request("api/v1/display"),
+          request("api/v1/capabilities"),
+        ]);
+        state.settings = settings;
+        state.display = display;
+        state.capabilities = capabilities;
+        populateSettings();
+        if (!state.appsDirty) renderApps();
+        if (showMessage) showToast(t("Valori ricaricati"));
+      } catch (error) {
+        showToast(error.message, true);
+      }
+    }
+
+    function renderSonos(payload, { refreshPlayers = false } = {}) {
+      state.sonos = payload;
+      const settings = payload.settings || {};
+      const sonosState = payload.state || {};
+      if (refreshPlayers) {
+        const select = $("sonosPlayer");
+        const selected = settings.playerEntityId || "";
+        const players = [...(payload.players || [])];
+        if (selected && !players.some((player) => player.entityId === selected)) {
+          players.unshift({ entityId: selected, name: selected });
+        }
+        select.replaceChildren(...players.map((player) => {
+          const option = document.createElement("option");
+          option.value = player.entityId;
+          option.textContent = `${player.name} · ${player.entityId}`;
+          return option;
+        }));
+        if (!players.length) {
+          const option = document.createElement("option");
+          option.value = selected;
+          option.textContent = selected || t("Nessun media_player disponibile");
+          select.append(option);
+        }
+        select.value = selected;
+        $("sonosEnabled").checked = settings.enabled !== false;
+        $("sonosPlaylistId").value = settings.playlistMediaContentId || "";
+        $("sonosPlaylistType").value = settings.playlistMediaContentType || "playlist";
+        $("sonosVolumeStep").value = String(settings.volumeStep ?? 5);
+        $("sonosLongPress").value = String(settings.longPressMs ?? 1200);
+      }
+      const active = Boolean(sonosState.active);
+      setDot("sonosDot", active ? "ok" : settings.enabled === false ? "" : "warn");
+      $("sonosStatus").textContent = active ? t("Attiva") : settings.enabled === false ? t("Disabilitata") : t("Pronta");
+      $("sonosToggle").textContent = active ? t("Esci dalla modalità") : t("Attiva ora");
+      ["sonosPrevious", "sonosPlayPause", "sonosNext", "sonosVolumeDown", "sonosVolumeUp"].forEach((id) => {
+        $(id).disabled = state.busy || !active;
+      });
+      const identity = sonosState.artist || sonosState.friendlyName || "Sonos";
+      const title = sonosState.title || sonosState.playerState || t("in attesa");
+      $("sonosNowPlaying").textContent = sonosState.lastError
+        ? t("Errore: {error}", {error: sonosState.lastError})
+        : active
+          ? t("{identity} — {title} · volume {volume}%", {
+              identity, title, volume: sonosState.volume ?? 0,
+            })
+          : t("La modalità Sonos non è attiva.");
+    }
+
+    async function loadSonos(refreshPlayers = true) {
+      try {
+        const payload = await request(`api/v1/sonos${refreshPlayers ? "" : "?players=0"}`);
+        renderSonos(payload, { refreshPlayers });
+      } catch (error) {
+        setDot("sonosDot", "bad");
+        $("sonosStatus").textContent = t("Non disponibile");
+        $("sonosNowPlaying").textContent = error.message;
+      }
+    }
+
+    async function saveSonos(event) {
+      event.preventDefault();
+      setBusy(true);
+      try {
+        await request("api/v1/sonos/settings", {
+          method: "PATCH",
+          body: {
+            enabled: $("sonosEnabled").checked,
+            playerEntityId: $("sonosPlayer").value,
+            playlistMediaContentId: $("sonosPlaylistId").value.trim(),
+            playlistMediaContentType: $("sonosPlaylistType").value.trim() || "playlist",
+            volumeStep: Number($("sonosVolumeStep").value),
+            longPressMs: Number($("sonosLongPress").value),
+          },
+        });
+        await loadSonos(true);
+        showToast(t("Impostazioni Sonos salvate"));
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function sonosCommand(path) {
+      setBusy(true);
+      try {
+        await request(`api/v1/sonos/${path}`, { method: "POST", body: {} });
+        await Promise.all([loadSonos(false), refreshLive()]);
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function saveConfiguration(event) {
+      event.preventDefault();
+      if (!state.settings || !state.display) return;
+      setBusy(true);
+      try {
+        const brightness = Number($("brightness").value);
+        const mp3Volume = Number($("volume").value);
+        const scroll = {
+          ...state.settings.scroll,
+          speed: Number($("scrollSpeed").value),
+          holdMs: Number($("scrollHold").value),
+        };
+        const timeFormat = $("timeFormat").value;
+        const [settings, displayResult] = await Promise.all([
+          request("api/v1/settings", {
+            method: "PATCH",
+            body: {
+              brightness,
+              mp3Volume,
+              appDurationMs: $("autoRotate").checked ? Number($("duration").value) * 1000 : 0,
+              musicTitleScrollRepeats: Number($("musicTitleScrollRepeats").value),
+              autoTransition: $("autoTransition").checked,
+              knobSoundEnabled: $("knobSoundEnabled").checked,
+              uppercase: $("uppercase").checked,
+              time24h: timeFormat !== "hhmm_ampm",
+              timeShowSeconds: timeFormat === "hhmmss",
+              timeShowAmPm: timeFormat === "hhmm_ampm",
+              fontFamily: $("fontFamily").value,
+              timeDateFontSize: $("timeDateFontSize").value,
+              displayLayout: $("displayLayout").value,
+              transitionEffect: $("transition").value,
+              transitionDurationMs: Number($("transitionDuration").value),
+              scroll,
+            },
+          }),
+          request("api/v1/display", {
+            method: "PATCH",
+            body: {
+              power: $("displayPower").checked,
+              overlay: $("overlay").value,
+            },
+          }),
+        ]);
+        state.settings = settings;
+        state.display = displayResult?.result || { ...state.display, power: $("displayPower").checked, overlay: $("overlay").value };
+        populateSettings();
+        showToast(t("Impostazioni salvate"));
+        await refreshLive();
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function switchApp(name) {
+      setBusy(true);
+      try {
+        await request("api/v1/apps/active", { method: "PUT", body: { name, fast: false } });
+        showToast(t("Mostro {name}", {name: friendlyName(name)}));
+        await refreshLive();
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function deletePushedApp(name) {
+      const label = friendlyName(name);
+      if (!window.confirm(t("Eliminare {name} dal bridge e cancellare il relativo comando MQTT mantenuto?", {name: label}))) return;
+      setBusy(true);
+      try {
+        await request(`api/v1/apps/${encodeURIComponent(name)}`, { method: "DELETE" });
+        delete state.titleEdits[name];
+        state.appsDirty = false;
+        showToast(t("{name} eliminata", {name: label}));
+        await Promise.all([loadConfiguration(), refreshLive()]);
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function navigateApp(direction) {
+      setBusy(true);
+      try {
+        await request(`api/v1/apps/${direction}`, { method: "POST" });
+        await refreshLive();
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function sendToolNotification(event) {
+      event.preventDefault();
+      const body = {
+        text: $("toolNotificationText").value,
+        textCase: "asTyped",
+        textColor: $("toolNotificationColor").value.toUpperCase(),
+        durationMs: Number($("toolNotificationDuration").value) * 1000,
+        hold: $("toolNotificationHold").checked,
+        stack: $("toolNotificationStack").checked,
+      };
+      if ($("toolNotificationIcon").value.trim()) body.icon = $("toolNotificationIcon").value.trim();
+      if ($("toolNotificationSound").value.trim()) body.sound = $("toolNotificationSound").value.trim();
+      setBusy(true);
+      try {
+        await request("api/v1/notifications", { method: "POST", body });
+        showToast(t("Notifica inviata"));
+        await refreshLive();
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function dismissToolNotification() {
+      setBusy(true);
+      try {
+        await request("api/v1/notifications/active", { method: "DELETE" });
+        showToast(t("Notifica rimossa"));
+        await refreshLive();
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function applyMoodlight(event) {
+      event.preventDefault();
+      setBusy(true);
+      try {
+        if ($("toolMoodlightEnabled").checked) {
+          await request("api/v1/display/moodlight", {
+            method: "PUT",
+            body: {
+              brightness: Number($("toolMoodlightBrightness").value),
+              color: $("toolMoodlightColor").value.toUpperCase(),
+              kelvin: Number($("toolMoodlightKelvin").value),
+            },
+          });
+        } else {
+          await request("api/v1/display/moodlight", { method: "DELETE" });
+        }
+        showToast(t("Moodlight aggiornata"));
+        await loadConfiguration();
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function applyIndicators(event) {
+      event.preventDefault();
+      setBusy(true);
+      try {
+        await Promise.all([1, 2, 3].map((number) => {
+          const enabled = $(`toolIndicator${number}Enabled`).checked;
+          return request(`api/v1/indicators/${number}`, enabled
+            ? {
+                method: "PUT",
+                body: {
+                  color: $(`toolIndicator${number}Color`).value.toUpperCase(),
+                  blinkMs: Number($(`toolIndicator${number}Blink`).value),
+                },
+              }
+            : { method: "DELETE" });
+        }));
+        showToast(t("Indicatori aggiornati"));
+        await refreshLive();
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function saveAppOrder() {
+      setBusy(true);
+      try {
+        if (Object.keys(state.titleEdits).length) {
+          const currentSettings = await request("api/v1/settings");
+          const titles = { ...currentSettings.appTitles };
+          for (const [name, text] of Object.entries(state.titleEdits)) {
+            if (text.trim()) titles[name] = text.trim();
+            else delete titles[name];
+          }
+          state.settings = await request("api/v1/settings", {
+            method: "PATCH", body: { appTitles: titles },
+          });
+        }
+        await request("api/v1/apps/order", {
+          method: "PUT",
+          body: {
+            order: state.apps.map((app) => app.name),
+            disabled: state.apps.filter((app) => !app.enabled).map((app) => app.name),
+          },
+        });
+        state.appsDirty = false;
+        state.titleEdits = {};
+        showToast(t("Schermate e titoli salvati"));
+        await refreshLive();
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    $("brightness").addEventListener("input", (event) => {
+      $("brightnessValue").value = `${event.target.value} / 255`;
+    });
+    $("volume").addEventListener("input", (event) => {
+      $("volumeValue").value = `${event.target.value} / 100`;
+    });
+    function syncDisplayLayout() {
+      const supported = ["awtrix_1x", "silkscreen", "scientifica"].includes($("fontFamily").value);
+      $("displayLayout").disabled = !supported;
+      $("displayLayoutHelp").textContent = supported
+        ? t("Il titolo resta fermo in alto e soltanto il valore scorre quando serve.")
+        : t("Il layout a due righe è disponibile con AWTRIX fedele 1×, Silkscreen e Scientifica minuscolo.");
+    }
+    $("fontFamily").addEventListener("change", syncDisplayLayout);
+    $("autoRotate").addEventListener("change", (event) => {
+      $("duration").disabled = !event.target.checked;
+    });
+    $("settingsForm").addEventListener("submit", saveConfiguration);
+    $("sonosForm").addEventListener("submit", saveSonos);
+    $("sonosToggle").addEventListener("click", () => sonosCommand("toggle"));
+    $("sonosPlayPause").addEventListener("click", () => sonosCommand("actions/playPause"));
+    $("sonosPrevious").addEventListener("click", () => sonosCommand("actions/previous"));
+    $("sonosNext").addEventListener("click", () => sonosCommand("actions/next"));
+    $("reloadSettings").addEventListener("click", () => loadConfiguration(true));
+    $("previousApp").addEventListener("click", () => navigateApp("previous"));
+    $("nextApp").addEventListener("click", () => navigateApp("next"));
+    $("republishApp").addEventListener("click", () => {
+      if (state.device?.currentApp) switchApp(state.device.currentApp);
+    });
+    $("saveApps").addEventListener("click", saveAppOrder);
+    $("notificationForm").addEventListener("submit", sendToolNotification);
+    $("dismissNotification").addEventListener("click", dismissToolNotification);
+    $("moodlightForm").addEventListener("submit", applyMoodlight);
+    $("indicatorsForm").addEventListener("submit", applyIndicators);
+    $("studioSourceType").addEventListener("change", showStudioSourceFields);
+    $("studioForm").addEventListener("submit", saveStudioApp);
+    $("newStudioApp").addEventListener("click", resetStudioForm);
+    $("resetStudioForm").addEventListener("click", resetStudioForm);
+    $("studioIconUpload").addEventListener("change", uploadStudioIcon);
+    $("importLametricFaithful").addEventListener("click", () => importLametricIcon("faithful2x"));
+    $("importLametricOptimized").addEventListener("click", () => importLametricIcon("tc002Optimized"));
+    $("studioLametricId").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        importLametricIcon("faithful2x");
+      }
+    });
+    $("studioTextColor").addEventListener("input", (event) => {
+      $("studioTextColorValue").value = event.target.value.toUpperCase();
+    });
+    $("studioBackgroundColor").addEventListener("input", (event) => {
+      $("studioBackgroundColorValue").value = event.target.value.toUpperCase();
+    });
+    $("studioForm").addEventListener("input", scheduleStudioPreview);
+    $("studioForm").addEventListener("change", scheduleStudioPreview);
+    $("refreshAll").addEventListener("click", async () => {
+      await Promise.all([loadConfiguration(), refreshLive(), loadStudio(), loadSonos(true)]);
+      showToast(t("Stato aggiornato"));
+    });
+
+    function poll(action, interval) {
+      const tick = async () => {
+        try {
+          if (!document.hidden && !state.busy) await action();
+        } finally {
+          setTimeout(tick, interval);
+        }
+      };
+      setTimeout(tick, interval);
+    }
+
+    $("sonosVolumeDown").addEventListener("click", () => sonosCommand("actions/volumeDown"));
+    $("sonosVolumeUp").addEventListener("click", () => sonosCommand("actions/volumeUp"));
+
+
+    function selectWorkspaceTab(name, updateHash = true) {
+      const keys = ["screens", "studio", "device", "diagnostics"];
+      if (!keys.includes(name)) name = "screens";
+      keys.forEach(key => {
+        const active = key === name;
+        $("tab-" + key).setAttribute("aria-selected", String(active));
+        $("tab-" + key).tabIndex = active ? 0 : -1;
+        $("panel-" + key).hidden = !active;
+      });
+      if (updateHash) history.replaceState(null, "", "#" + name);
+      if (name === "studio") scheduleStudioPreview();
+    }
+
+    function syncTemplatePicker() {
+      const selected = $("studioDisplayTemplate").value;
+      const rain = $("studioSourceType").value === "rain";
+      document.querySelectorAll("[data-template]").forEach(button => {
+        button.setAttribute("aria-pressed", String(button.dataset.template === selected));
+        button.disabled = !state.studioAuthorized || (rain && button.dataset.template !== "inherit");
+      });
+      $("studioDisplayTitleField").hidden = selected !== "labelled";
+      $("templateHelp").textContent = rain
+        ? t("Le previsioni di pioggia usano il loro layout a grafico.")
+        : t("Il modello cambia solo questa app. Contenuto e colori restano personalizzabili.");
+    }
+
+    async function loadTemplateGallery() {
+      if (state.templatesLoaded || state.templatesLoading) return;
+      state.templatesLoading = true;
+      try {
+        await Promise.all(["inherit", "focus", "labelled"].map(async template => {
+          const preview = await request("api/v1/studio/preview", {method: "POST", body: {
+            name: "esempio", sourceType: "static", staticText: "21.5°",
+            textColor: "#38E6C5", displayTemplate: template, displayTitle: "CASA",
+          }});
+          drawScreen(preview, "template-" + template);
+        }));
+        state.templatesLoaded = true;
+      } catch (error) {
+        // The main preview reports connectivity and validation errors.
+      } finally {
+        state.templatesLoading = false;
+      }
+    }
+
+    document.querySelectorAll("[data-tab]").forEach(button => {
+      button.addEventListener("click", () => selectWorkspaceTab(button.dataset.tab));
+      button.addEventListener("keydown", event => {
+        const tabs = [...document.querySelectorAll("[data-tab]")];
+        let index = tabs.indexOf(button);
+        if (event.key === "ArrowRight") index = (index + 1) % tabs.length;
+        else if (event.key === "ArrowLeft") index = (index + tabs.length - 1) % tabs.length;
+        else if (event.key === "Home") index = 0;
+        else if (event.key === "End") index = tabs.length - 1;
+        else return;
+        event.preventDefault();
+        selectWorkspaceTab(tabs[index].dataset.tab);
+        tabs[index].focus();
+      });
+    });
+    document.querySelectorAll("[data-template]").forEach(button => {
+      button.addEventListener("click", () => {
+        $("studioDisplayTemplate").value = button.dataset.template;
+        syncTemplatePicker();
+        scheduleStudioPreview();
+      });
+    });
+    $("interfaceLanguage").addEventListener("change", event => {
+      setInterfaceLanguage(event.target.value);
+    });
+    document.querySelector('.top-link[href="#studio"]').addEventListener("click", () => selectWorkspaceTab("studio"));
+    window.addEventListener("hashchange", () => selectWorkspaceTab(location.hash.slice(1), false));
+    selectWorkspaceTab(location.hash.slice(1), false);
+
+    async function initialize() {
+      resetStudioForm();
+      await Promise.all([
+        loadConfiguration(), refreshLive(), loadStudioIcons(), loadStudio(), loadSonos(true),
+      ]);
+      poll(refreshLive, 1000);
+      poll(() => loadSonos(false), 1000);
+      poll(loadStudio, 4000);
+      poll(renderStudioPreview, 700);
+    }
+
+    setInterfaceLanguage(preferredLanguage(), false);
+    initialize();
+  </script>
+</body>
+</html>

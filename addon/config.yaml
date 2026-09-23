@@ -1,0 +1,66 @@
+name: TC002 AWTRIX Bridge
+version: 0.2.25
+slug: tc002_awtrix_bridge
+description: AWTRIX NG MQTT/HTTP compatibility bridge for Ulanzi TC002 Pixbar
+url: https://github.com/lucaamo/tc002-awtrix-ha-addon
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+init: false
+startup: services
+boot: auto
+host_network: true
+services:
+  - mqtt:need
+ingress: true
+ingress_port: 7000
+homeassistant_api: true
+panel_icon: mdi:led-strip-variant
+panel_title: TC002 Bridge
+webui: http://[HOST]:[PORT:7000]
+ports:
+  7000/tcp: 7000
+  9877/udp: 9877
+ports_description:
+  7000/tcp: AWTRIX-compatible HTTP API
+  9877/udp: TC002 companion events
+options:
+  uid: tc002
+  name: TC002 Pixbar
+  timezone: UTC
+  tc002_host: 192.168.1.50
+  adapter_mode: stock_http
+  tc002_http_port: 80
+  tc002_http_app: awtrix_bridge
+  tc002_http_max_fps: 10
+  tc002_http_frame_lifetime: 60
+  mqtt_host: core-mosquitto
+  mqtt_port: 1883
+  mqtt_prefix: tc002
+  mqtt_username: ""
+  mqtt_password: ""
+  adapter_token: ""
+  renderer_mode: tc002_native
+  strict: true
+  extensions: false
+schema:
+  uid: str
+  name: str
+  timezone: str
+  tc002_host: str
+  adapter_mode: list(stock_http|udp)
+  tc002_http_port: port
+  tc002_http_app: str
+  tc002_http_max_fps: int(1,20)
+  tc002_http_frame_lifetime: int(5,3600)
+  mqtt_host: str
+  mqtt_port: port
+  mqtt_prefix: str
+  mqtt_username: str?
+  mqtt_password: password?
+  adapter_token: password?
+  renderer_mode: list(awtrix_compatible|tc002_native)
+  strict: bool
+  extensions: bool
