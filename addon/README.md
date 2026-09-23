@@ -26,7 +26,7 @@ while a dedicated now-playing screen pauses the normal carousel.
 
 Adds a one-time, checksum-verified import path for migration from the local
 add-on. The new repository add-on reads a prepared snapshot from its own
-read-only `/config/tc002-migration` directory, imports only the known state
+read-only `/config/tc002-migration.tar.gz` archive, imports only the known state
 files and icons into a fresh `/data`, and refuses to overwrite existing state.
 The snapshot and manifest are never distributed with the add-on. Supervisor
 options, including the adapter token and MQTT settings, must be transferred

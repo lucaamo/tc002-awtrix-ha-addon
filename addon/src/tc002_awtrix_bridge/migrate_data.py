@@ -8,6 +8,7 @@ import json
 import os
 import re
 import shutil
+import tarfile
 import tempfile
 from pathlib import Path
 
@@ -79,12 +80,34 @@ def migrate(source: Path, target: Path) -> int:
     return len(files)
 
 
+def migrate_archive(archive: Path, target: Path) -> int:
+    if not archive.exists() or (target / MARKER).exists():
+        return 0
+    with tempfile.TemporaryDirectory() as temporary:
+        source = Path(temporary)
+        with tarfile.open(archive, "r:gz") as bundle:
+            members = bundle.getmembers()
+            if not members or len(members) > 257:
+                raise ValueError("Invalid migration archive count")
+            for member in members:
+                name = member.name
+                if not member.isfile() or not (
+                    name == "manifest.json" or name in STATE_FILES or ICON_NAME.fullmatch(name)
+                ) or member.size > MAX_FILE_SIZE:
+                    raise ValueError("Unexpected migration archive member")
+                dest = source / name
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                with bundle.extractfile(member) as input_stream, dest.open("wb") as output_stream:
+                    shutil.copyfileobj(input_stream, output_stream)
+        return migrate(source, target)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--target", type=Path, required=True)
     args = parser.parse_args()
-    count = migrate(args.source, args.target)
+    count = migrate_archive(args.source, args.target)
     if count:
         print(f"Imported {count} verified bridge data files")
 

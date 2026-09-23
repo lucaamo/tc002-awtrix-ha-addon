@@ -20,7 +20,7 @@ copied to the repository-installed app and the new app has passed a live check.
 The two apps cannot run together on the same TCP/UDP ports and MQTT identity.
 
 Release 0.2.26 adds a one-time importer for existing local installations.
-Its snapshot must be staged in the repository app's private `addon_config`
+Its snapshot archive must be staged in the repository app's private `addon_config`
 directory with a SHA-256 manifest before first start. It imports only the
 known bridge state files and icons, never Supervisor options. Keep a backup
 and the local app installed until the new app is verified. The distribution
