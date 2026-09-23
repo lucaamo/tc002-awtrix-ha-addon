@@ -30,6 +30,7 @@ APP_KEYS = {
     "iconMode",
     "iconOffsetX",
     "durationMs",
+    "timingMode",
     "scroll",
     "repeat",
     "lifetimeMs",
@@ -308,6 +309,8 @@ def validate_app_payload(
             raise validation("palette must be a known name or non-empty color array", "palette")
     if "displayTemplate" in result and result["displayTemplate"] not in DISPLAY_TEMPLATES:
         raise validation("Unknown display template", "displayTemplate")
+    if "timingMode" in result and (not isinstance(result["timingMode"], str) or result["timingMode"] not in {"seconds", "scrolls"}):
+        raise validation("Choose seconds or scrolls", "timingMode")
     if "displayTitle" in result:
         title = result["displayTitle"]
         if not isinstance(title, str) or len(title) > 32 or any(ord(c) < 32 for c in title):

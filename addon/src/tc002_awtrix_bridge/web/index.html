@@ -854,11 +854,13 @@
 
             </details>
             <p class="studio-step">3 · Quando mostrarla</p>
+            <div class="field"><label for="studioTimingMode">Passa alla prossima app</label><select id="studioTimingMode"><option value="seconds">Dopo un numero di secondi</option><option value="scrolls">Dopo gli scorrimenti completi</option></select><small id="studioTimingHelp">La durata controlla quando il carosello cambia app.</small></div>
             <div class="three-fields">
-              <div class="field">
+              <div class="field" id="studioDurationField">
                 <label for="studioDuration">Durata (secondi)</label>
                 <input id="studioDuration" type="number" min="1" max="3600" step="1" value="10">
               </div>
+              <div class="field" id="studioRepeatField" hidden><label for="studioRepeat">Scorrimenti completi</label><input id="studioRepeat" type="number" min="1" max="100" value="1"></div>
               <div class="field">
                 <label for="studioScrollSpeed">Scorrimento (ms/pixel)</label>
                 <input id="studioScrollSpeed" type="number" min="10" max="1000" step="5" value="85">
@@ -870,7 +872,6 @@
             </div>
 
             <div class="three-fields">
-              <div class="field"><label for="studioRepeat">Ripetizioni</label><input id="studioRepeat" type="number" min="0" max="100" value="1"></div>
               <div class="field"><label for="studioLifetime">Scadenza (secondi)</label><input id="studioLifetime" type="number" min="0" max="86400" value="0"></div>
               <div class="field"><label for="studioLifetimeExpiry">Alla scadenza</label><select id="studioLifetimeExpiry"><option value="remove">Rimuovi</option><option value="mark">Segna scaduta</option></select></div>
             </div>
@@ -1295,6 +1296,13 @@
       "Titolo e valore": "Title and value",
       "Due righe ben distinte": "Two clearly separated lines",
       "Il modello cambia solo questa app. Contenuto e colori restano personalizzabili.": "The template changes only this app. Content and colours remain customizable.",
+      "Passa alla prossima app": "Move to the next app",
+      "Dopo un numero di secondi": "After a number of seconds",
+      "Dopo gli scorrimenti completi": "After complete scrolls",
+      "Scorrimenti completi": "Complete scrolls",
+      "La durata controlla quando il carosello cambia app.": "The duration controls when the carousel changes app.",
+      "Il carosello attende gli scorrimenti scelti. Se il testo è corto scorre comunque; dopo 10 minuti passa oltre per sicurezza.": "The carousel waits for the selected scrolls. Short text scrolls too; after 10 minutes it moves on as a safeguard.",
+      "Per questa app o con lo scorrimento disattivato usa la durata in secondi.": "Use seconds for this app or when text scrolling is off.",
       "Titolo breve sul display": "Short display title",
       "es. CASA, CO2, ENERGIA": "e.g. HOME, CO2, ENERGY",
       "Se vuoto, viene usato il nome dell’app. I titoli lunghi vengono abbreviati.": "If empty, the app name is used. Long titles are shortened.",
@@ -2140,6 +2148,7 @@
         font: $("studioFont").value,
         textCenter: $("studioTextCenter").checked,
         durationMs: Number($("studioDuration").value) * 1000,
+        timingMode: $("studioTimingMode").value,
         scrollSpeed: Number($("studioScrollSpeed").value),
         scrollHoldMs: Number($("studioScrollHold").value),
         effect: $("studioEffect").value,
@@ -2325,10 +2334,29 @@
       $("studioPrefix").closest(".field").hidden = !(entityOnly || (list && !compact));
       $("studioDecimals").closest(".field").hidden = !(entityOnly || type === "weather");
       for (const id of ["studioScrollSpeed", "studioScrollHold", "studioScrollEnabled", "studioTextCenter"]) $(id).closest(".field, .switch-row").hidden = type === "rain" || compact;
+      syncStudioTimingMode();
       $("studioAdvanced").hidden = type === "rain";
       $("studioEffects").hidden = type === "rain";
       loadStudioEntities(type);
       scheduleStudioPreview();
+    }
+
+    function syncStudioTimingMode() {
+      const type = $("studioSourceType").value;
+      const compact = ["weather", "calendar", "todo"].includes(type) && $("studioCompactLayout").checked;
+      const eligible = type !== "rain" && !compact && $("studioScrollEnabled").checked;
+      $("studioTimingMode").querySelector('option[value="scrolls"]').disabled = !eligible;
+      if (!eligible && $("studioTimingMode").value === "scrolls") $("studioTimingMode").value = "seconds";
+      const scrolls = $("studioTimingMode").value === "scrolls";
+      $("studioDurationField").hidden = scrolls;
+      $("studioRepeatField").hidden = !scrolls;
+      $("studioDuration").required = !scrolls;
+      $("studioRepeat").required = scrolls;
+      $("studioTimingHelp").textContent = t(!eligible
+        ? "Per questa app o con lo scorrimento disattivato usa la durata in secondi."
+        : scrolls
+          ? "Il carosello attende gli scorrimenti scelti. Se il testo è corto scorre comunque; dopo 10 minuti passa oltre per sicurezza."
+          : "La durata controlla quando il carosello cambia app.");
     }
 
     function addStudioBirthday(entry = {name: "", date: ""}) {
@@ -2442,6 +2470,7 @@
       $("studioBackgroundColorValue").value = "#000000";
       $("studioFont").value = "large";
       $("studioDuration").value = "10";
+      $("studioTimingMode").value = "seconds";
       $("studioScrollSpeed").value = "85";
       $("studioScrollHold").value = "1000";
       $("studioTextCenter").checked = true;
@@ -2521,6 +2550,7 @@
       $("studioFont").value = app.font;
       $("studioTextCenter").checked = app.textCenter;
       $("studioDuration").value = String(app.durationMs / 1000);
+      $("studioTimingMode").value = app.timingMode || "seconds";
       $("studioScrollSpeed").value = String(app.scrollSpeed);
       $("studioScrollHold").value = String(app.scrollHoldMs);
       $("studioEffect").value = app.effect;
@@ -3251,6 +3281,8 @@
     $("moodlightForm").addEventListener("submit", applyMoodlight);
     $("indicatorsForm").addEventListener("submit", applyIndicators);
     $("studioSourceType").addEventListener("change", showStudioSourceFields);
+    $("studioTimingMode").addEventListener("change", () => { syncStudioTimingMode(); state.studioDirty = true; scheduleStudioPreview(); });
+    $("studioScrollEnabled").addEventListener("change", syncStudioTimingMode);
     $("studioBirthdayAdd").addEventListener("click", () => addStudioBirthday());
     $("studioBirthdayChoose").addEventListener("click", () => $("studioBirthdayUpload").click());
     $("studioBirthdayUpload").addEventListener("change", uploadStudioBirthdays);

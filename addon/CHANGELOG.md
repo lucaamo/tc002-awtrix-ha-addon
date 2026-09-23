@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.38
+
+- Let App Studio choose one carousel timing rule per app: elapsed seconds or a
+  number of complete text scrolls. Existing apps keep their seconds-based rule.
+- In scroll mode, short text scrolls too. The bridge waits for the selected
+  count before changing pages, with a ten-minute safety deadline. Rain charts,
+  compact layouts and apps with scrolling disabled use seconds.
+
 ## 0.2.37
 
 - Use one fixed age-aware birthday message per language (Italian or English),

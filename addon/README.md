@@ -22,6 +22,14 @@ playlist URI, volume step and long-press threshold. With the native companion,
 the knob and rocker become play/pause, next/previous and Sonos volume controls
 while a dedicated now-playing screen pauses the normal carousel.
 
+## 0.2.38
+
+App Studio now asks when to move to the next app: after a number of seconds or
+after a number of complete text scrolls. Only the chosen control appears.
+Existing apps continue using seconds until changed. Scroll timing forces even
+short text to move; a ten-minute safety deadline prevents a page getting stuck.
+Rain charts, compact layouts and apps with scrolling disabled use seconds.
+
 ## 0.2.37
 
 Birthday entries contain only a name and full birth date (`YYYY-MM-DD`). App

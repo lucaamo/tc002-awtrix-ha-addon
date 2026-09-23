@@ -81,6 +81,7 @@ STUDIO_KEYS = {
     "font",
     "textCenter",
     "durationMs",
+    "timingMode",
     "scrollSpeed",
     "scrollHoldMs",
     "effect",
@@ -145,6 +146,7 @@ DEFAULT_DEFINITION: dict[str, Any] = {
     "font": "large",
     "textCenter": True,
     "durationMs": 10_000,
+    "timingMode": "seconds",
     "scrollSpeed": 85,
     "scrollHoldMs": 1_000,
     "effect": "",
@@ -265,6 +267,8 @@ def validate_definition(payload: Any, *, expected_name: str | None = None) -> di
 
     candidate["decimals"] = _integer(candidate["decimals"], "decimals", -1, 3)
     candidate["durationMs"] = _integer(candidate["durationMs"], "durationMs", 1_000, 3_600_000)
+    if not isinstance(candidate["timingMode"], str) or candidate["timingMode"] not in {"seconds", "scrolls"}:
+        raise validation("Choose seconds or scrolls", "timingMode")
     candidate["scrollSpeed"] = _integer(
         candidate["scrollSpeed"], "scrollSpeed", 10, 1_000
     )
@@ -272,6 +276,13 @@ def validate_definition(payload: Any, *, expected_name: str | None = None) -> di
         candidate["scrollHoldMs"], "scrollHoldMs", 0, 10_000
     )
     candidate["repeat"] = _integer(candidate["repeat"], "repeat", 0, 100)
+    if candidate["timingMode"] == "scrolls":
+        if candidate["repeat"] < 1:
+            raise validation("Enter at least one scroll", "repeat")
+        if not candidate["scrollEnabled"] or candidate["sourceType"] == "rain" or (
+            candidate["compactLayout"] and candidate["sourceType"] in {"weather", "calendar", "todo"}
+        ):
+            raise validation("Scrolling must be enabled for scroll timing", "timingMode")
     candidate["lifetimeMs"] = _integer(
         candidate["lifetimeMs"], "lifetimeMs", 0, 86_400_000
     )
@@ -612,6 +623,7 @@ class StudioManager:
             "font": definition["font"],
             "textCenter": definition["textCenter"],
             "durationMs": definition["durationMs"],
+            "timingMode": definition["timingMode"],
             "repeat": definition["repeat"],
             "lifetimeMs": definition["lifetimeMs"],
             "lifetimeExpiry": definition["lifetimeExpiry"],
@@ -619,7 +631,7 @@ class StudioManager:
                 "mode": "wrap" if definition["scrollEnabled"] else "static",
                 "direction": "left",
                 "entry": "inline",
-                "whenFits": "static",
+                "whenFits": "scroll" if definition["timingMode"] == "scrolls" else "static",
                 "speed": definition["scrollSpeed"],
                 "gap": 8,
                 "holdMs": definition["scrollHoldMs"],

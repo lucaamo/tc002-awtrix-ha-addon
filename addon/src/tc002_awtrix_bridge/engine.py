@@ -49,6 +49,7 @@ TWO_LINE_PAGE_LABELS: dict[str, tuple[str, tuple[str, ...]]] = {
     "sensor_homey_alfa_measure_power": ("POTENZA", ("POTENZA",)),
     "sensor_smart_thermostat_x_temper": ("CASA", ("CASA",)),
     "weather_meteo_home": ("METEO", ("METEO",)),
+    "PesoVittoria": ("PESO", ("PESO VITTORIA", "PESO")),
     "birthday": ("AUGURI", ("COMPLEANNO", "AUGURI")),
     "mediaplayer": ("MUSICA", ("MUSICA",)),
 }
@@ -694,7 +695,12 @@ class Engine:
     def _rotate_if_due(self, now_ms: int) -> None:
         page = self.pages.current
         duration = int(page.spec.get("durationMs", self.settings.get("appDurationMs", 7000)))
-        if duration > 0 and now_ms - self.pages.page_started_ms >= duration:
+        elapsed = now_ms - self.pages.page_started_ms
+        if page.spec.get("timingMode") == "scrolls":
+            due = elapsed >= 600_000 or (elapsed >= 1_000 and self._page_scroll_complete)
+        else:
+            due = duration > 0 and elapsed >= duration
+        if due:
             if self._page_wait_for_scroll and not self._page_scroll_complete:
                 return
             self._begin_transition(now_ms)
