@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.35
+
+- Give Birthday list actions full-size buttons and a responsive layout so
+  adding a person and uploading CSV remain legible in Home Assistant.
+- Add a downloadable example CSV directly in App Studio.
+
 ## 0.2.34
 
 - Keep the Python package version and Home Assistant add-on version in sync

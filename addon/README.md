@@ -22,6 +22,13 @@ playlist URI, volume step and long-press threshold. With the native companion,
 the knob and rocker become play/pause, next/previous and Sonos volume controls
 while a dedicated now-playing screen pauses the normal carousel.
 
+## 0.2.35
+
+Birthday list controls are easier to read in Home Assistant. Use **Scarica CSV
+di esempio** in App Studio to download a sample file, replace the generic
+names/dates/messages locally, then use **Carica CSV**. The example contains no
+personal data.
+
 ## 0.2.34
 
 The health and device endpoints now report the same installed version shown

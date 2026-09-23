@@ -270,6 +270,13 @@
     .studio-preview-head strong { font-size: 13px; }
     .studio-form { display: grid; gap: 16px; }
     .three-fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 13px; }
+    .birthday-row { display: grid; grid-template-columns: minmax(0, 1fr) 130px minmax(0, 1.5fr) 35px; gap: 10px; align-items: end; margin: 10px 0; }
+    .birthday-row .field { min-width: 0; }
+    .birthday-row .mini { margin-bottom: 5px; }
+    .birthday-actions { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; margin: 16px 0 10px; }
+    .birthday-action { display: inline-flex; align-items: center; justify-content: center; width: auto; min-height: 40px; height: auto; padding: 8px 13px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); color: var(--text); font: inherit; font-weight: 650; line-height: 1.2; white-space: nowrap; cursor: pointer; }
+    .birthday-action:hover { border-color: var(--accent); color: var(--accent); }
+    .birthday-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .entity-fields[hidden], .static-fields[hidden] { display: none; }
     .color-field { display: flex; align-items: center; min-height: 41px; padding: 3px 7px 3px 10px; border: 1px solid var(--border); border-radius: 10px; background: #0d141d; }
     .color-field output { flex: 1; color: var(--muted); font: 600 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
@@ -366,6 +373,9 @@
       .status-list { grid-template-columns: 1fr; }
       .two-fields { grid-template-columns: 1fr; }
       .three-fields { grid-template-columns: 1fr; }
+      .birthday-row { grid-template-columns: 1fr 35px; }
+      .birthday-row .field { grid-column: 1; }
+      .birthday-row .mini { grid-column: 2; grid-row: 1; }
       .lametric-import { grid-template-columns: 1fr; align-items: stretch; }
       .lametric-import-copy, .lametric-help { grid-column: 1; }
       .lametric-actions { display: grid; grid-template-columns: 1fr 1fr; }
@@ -694,10 +704,11 @@
             <div id="studioBirthdayFields" hidden>
               <p class="field-help">L'app compare solo nel giorno del compleanno, secondo il fuso orario del bridge. Il messaggio scorre sul display; usa {name} per inserire il nome. Il 29 febbraio compare solo negli anni bisestili.</p>
               <div id="studioBirthdayList"></div>
-              <div class="button-row">
-                <button type="button" class="mini" id="studioBirthdayAdd">Aggiungi compleanno</button>
-                <label class="mini" for="studioBirthdayUpload">Carica CSV</label>
+              <div class="birthday-actions">
+                <button type="button" class="birthday-action" id="studioBirthdayAdd">Aggiungi compleanno</button>
+                <button type="button" class="birthday-action" id="studioBirthdayChoose">Carica CSV</button>
                 <input id="studioBirthdayUpload" type="file" accept=".csv,text/csv" hidden>
+                <button type="button" class="birthday-action" id="studioBirthdayExample">Scarica CSV di esempio</button>
               </div>
               <small>CSV UTF-8 con intestazione name,date,message. Data nel formato MM-DD oppure YYYY-MM-DD; l'anno non viene salvato. Il caricamento aggiunge le righe alla lista.</small>
             </div>
@@ -1609,6 +1620,7 @@
       "Messaggio": "Message",
       "Aggiungi compleanno": "Add birthday",
       "Carica CSV": "Upload CSV",
+      "Scarica CSV di esempio": "Download sample CSV",
       "Rimuovi compleanno": "Remove birthday",
       "Buon compleanno {name}!": "Happy birthday {name}!",
       "Massimo 100 compleanni": "Maximum 100 birthdays",
@@ -2363,6 +2375,16 @@
         entries.forEach(addStudioBirthday); showToast(t("{count} compleanni aggiunti", {count: entries.length}));
       } catch (error) { showToast(error.message, true); }
       finally { event.target.value = ""; }
+    }
+
+    function downloadStudioBirthdayExample() {
+      const csv = '\uFEFFname,date,message\r\nAlex,05-12,"Buon compleanno {name}!"\r\nSam,11-03,"Tanti auguri {name}!"\r\n';
+      const url = URL.createObjectURL(new Blob([csv], {type: "text/csv;charset=utf-8"}));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "compleanni-esempio.csv";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1_000);
     }
 
     function setStudioAccess(allowed, message, error = false) {
@@ -3217,7 +3239,9 @@
     $("indicatorsForm").addEventListener("submit", applyIndicators);
     $("studioSourceType").addEventListener("change", showStudioSourceFields);
     $("studioBirthdayAdd").addEventListener("click", () => addStudioBirthday());
+    $("studioBirthdayChoose").addEventListener("click", () => $("studioBirthdayUpload").click());
     $("studioBirthdayUpload").addEventListener("change", uploadStudioBirthdays);
+    $("studioBirthdayExample").addEventListener("click", downloadStudioBirthdayExample);
     document.querySelectorAll("[data-studio-preset]").forEach(button => button.addEventListener("click", () => applyStudioPreset(button.dataset.studioPreset)));
     $("studioOrder").addEventListener("click", () => { selectWorkspaceTab("screens"); $("panel-screens").scrollIntoView({behavior: "smooth", block: "start"}); });
     $("studioEntityId").addEventListener("input", () => {
