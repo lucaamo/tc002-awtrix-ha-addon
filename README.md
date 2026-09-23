@@ -19,9 +19,9 @@ Do not uninstall or disable it until its options and `/data` content have been
 copied to the repository-installed app and the new app has passed a live check.
 The two apps cannot run together on the same TCP/UDP ports and MQTT identity.
 
-Release 0.2.31 rebuilds App Studio for the TC002 display with guided creation,
-live-data previews, compact layouts, library management and safer polling.
-Source change: private development commit `47fbf02`.
+Release 0.2.32 refines the App Studio redesign for Home Assistant's narrower
+viewport and removes irrelevant controls from rain and compact layouts.
+Source change: private development commit `4715ec6`.
 It is based on development commit `ee5763d`.
 
 The repository also includes a one-time importer for existing local installations.

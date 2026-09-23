@@ -22,6 +22,12 @@ playlist URI, volume step and long-press threshold. With the native companion,
 the knob and rocker become play/pause, next/previous and Sonos volume controls
 while a dedicated now-playing screen pauses the normal carousel.
 
+## 0.2.32
+
+The Studio library stacks above the editor in narrower Home Assistant windows.
+Rain and compact layouts hide controls that do not affect their pixels, and the
+preview caption follows the selected sample/current-data mode.
+
 ## 0.2.31
 
 App Studio now starts with source cards and presets, groups advanced controls,

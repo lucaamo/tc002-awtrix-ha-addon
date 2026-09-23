@@ -299,6 +299,7 @@
     .studio-advanced[open] > summary { margin-bottom: 17px; }
     .studio-preview-controls { display: flex; gap: 8px; align-items: center; margin-bottom: 9px; }
     .studio-preview-controls button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+    @media (max-width: 1400px) { .studio-layout { display: flex; flex-direction: column; } .studio-library { order: -1; } }
     .btn.danger { color: var(--danger); }
     .icon-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
     .file-button { position: relative; overflow: hidden; }
@@ -589,7 +590,7 @@
           <div class="studio-preview">
             <div class="studio-preview-head">
               <strong>Anteprima app</strong>
-              <span>52 × 16 · dati di esempio</span>
+              <span id="studioPreviewCaption">52 × 16 · dati di esempio</span>
             </div>
             <div class="clock-shell">
               <canvas id="studioScreen" width="52" height="16" aria-label="Anteprima dell’app personalizzata"></canvas>
@@ -1429,6 +1430,8 @@
       "Prossimo evento": "Next event",
       "Ordina nel carosello ↗": "Order in carousel ↗",
       "Fuso orario del bridge": "Bridge time zone",
+      "52 × 16 · dati attuali": "52 × 16 · current data",
+      "52 × 16 · dati di esempio": "52 × 16 · sample data",
       "Ora locale del bridge.": "Bridge local time.",
       "Parti da un esempio oppure scegli il contenuto qui sotto. Per i dati live seleziona poi un’entità.": "Start from an example or choose content below. Select an entity for live data.",
       "Dati attuali dell’app salvata · le modifiche non salvate non sono incluse": "Current data from the saved app · unsaved changes are not included",
@@ -2189,6 +2192,7 @@
       $("studioPreviewExample").setAttribute("aria-pressed", String(state.studioPreviewMode === "example"));
       $("studioPreviewLive").setAttribute("aria-pressed", String(state.studioPreviewMode === "live"));
       $("studioPreviewLive").disabled = !state.studioEditingName;
+      $("studioPreviewCaption").textContent = state.studioPreviewMode === "live" ? t("52 × 16 · dati attuali") : t("52 × 16 · dati di esempio");
     }
 
     function duplicateStudioApp(app) {
@@ -2234,6 +2238,7 @@
 
     function showStudioSourceFields() {
       const type = $("studioSourceType").value;
+      const compact = ["weather", "calendar", "todo"].includes(type) && $("studioCompactLayout").checked;
       document.querySelectorAll("[data-studio-source]").forEach(button => {
         button.setAttribute("aria-pressed", String(button.dataset.studioSource === type));
       });
@@ -2252,6 +2257,12 @@
       syncTemplatePicker();
       $("studioEntityId").required = needsEntity;
       $("studioTargetDateTime").required = type === "countdown";
+      const entityOnly = type === "entity";
+      const list = ["calendar", "todo"].includes(type);
+      for (const id of ["studioAttribute", "studioSuffix", "studioSample", "studioUseEntityUnit"]) $(id).closest(".field, .switch-row").hidden = !entityOnly;
+      $("studioPrefix").closest(".field").hidden = !(entityOnly || (list && !compact));
+      $("studioDecimals").closest(".field").hidden = !(entityOnly || type === "weather");
+      for (const id of ["studioScrollSpeed", "studioScrollHold", "studioScrollEnabled", "studioTextCenter"]) $(id).closest(".field, .switch-row").hidden = type === "rain" || compact;
       $("studioAdvanced").hidden = type === "rain";
       $("studioEffects").hidden = type === "rain";
       loadStudioEntities(type);
@@ -3235,6 +3246,7 @@
       setInterfaceLanguage(event.target.value);
       buildStudioSourceGallery();
       showStudioSourceFields();
+      syncStudioPreviewMode();
     });
     document.querySelector('.top-link[href="#studio"]').addEventListener("click", () => selectWorkspaceTab("studio"));
     window.addEventListener("hashchange", () => selectWorkspaceTab(location.hash.slice(1), false));

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.32
+
+- Improve App Studio in Home Assistant's narrower viewport: put the library
+  above the editor and hide controls that do not affect rain or compact pages.
+- Keep the preview caption consistent with the selected sample/current-data mode.
+
+
 ## 0.2.31
 
 - Rework App Studio as a guided editor with source cards, presets, type-specific
