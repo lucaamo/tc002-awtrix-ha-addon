@@ -16,6 +16,7 @@ import aiohttp
 
 from .engine import Engine
 from .errors import BridgeError, not_found, unavailable, validation
+from .rain_display import rain_timeline
 from .validation import DISPLAY_TEMPLATES, parse_color, validate_app_name, validate_pushed_payload
 
 LOGGER = logging.getLogger(__name__)
@@ -695,18 +696,20 @@ class StudioManager:
             )
             response = self._service_entity_payload(payload, definition["entityId"])
             forecasts = response.get("forecast", [])
-            values = [
-                max(0, round(float(item.get("precipitation") or 0) * 100))
-                for item in forecasts[:11]
-                if isinstance(item, dict)
-            ]
-            text = "" if any(values) else definition["emptyText"]
-            extra = {
-                definition["chartType"]: values,
-                "chartAutoscale": definition["chartAutoscale"],
-                "chartColor": definition["chartColor"],
-            }
-            return self._spec(definition, sum(values), text_override=text, extra=extra), values
+            if not isinstance(forecasts, list) or not forecasts:
+                raise unavailable("Hourly rain forecast is unavailable")
+            draw, values, _ = rain_timeline(
+                forecasts,
+                chart_type=definition["chartType"],
+                autoscale=definition["chartAutoscale"],
+                chart_color=definition["chartColor"],
+                unit=str(attributes.get("precipitation_unit") or "mm"),
+            )
+            if not values:
+                raise unavailable("Hourly rain forecast has no usable entries")
+            return self._spec(
+                definition, sum(values), text_override="", extra={"draw": draw}, icon_override=""
+            ), values
 
         if source_type == "calendar":
             now = datetime.now(ZoneInfo(self.engine.config.timezone))
@@ -915,15 +918,21 @@ class StudioManager:
                 definition, sample_value, text_override=text, icon_override=icon
             )
         elif definition["sourceType"] == "rain":
+            draw, _, _ = rain_timeline(
+                [
+                    {"precipitation": amount}
+                    for amount in (0, 0, 0.4, 1.2, 2.6, 1.1, 0.2, 0, 0, 0)
+                ],
+                chart_type=definition["chartType"],
+                autoscale=definition["chartAutoscale"],
+                chart_color=definition["chartColor"],
+            )
             spec = self._spec(
                 definition,
                 sample_value,
                 text_override="",
-                extra={
-                    definition["chartType"]: [0, 1, 3, 5, 2, 0, 4, 7, 3, 1, 0],
-                    "chartAutoscale": definition["chartAutoscale"],
-                    "chartColor": definition["chartColor"],
-                },
+                extra={"draw": draw},
+                icon_override="",
             )
         elif definition["sourceType"] in {"calendar", "todo"}:
             spec = self._spec(

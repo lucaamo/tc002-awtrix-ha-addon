@@ -22,6 +22,12 @@ playlist URI, volume step and long-press threshold. With the native companion,
 the knob and rocker become play/pause, next/previous and Sonos volume controls
 while a dedicated now-playing screen pauses the normal carousel.
 
+## 0.2.29
+
+Rain forecasts now use a dedicated 52×16 timeline with an arrival-time
+headline, amount bars or line, heavy-rain colour, dry outlook and probability
+fallback. The preview uses the same renderer as the live panel.
+
 ## 0.2.28
 
 Reports the installed package version in health, device info and discovery.

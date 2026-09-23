@@ -206,6 +206,7 @@
 
     .form-body { display: grid; gap: 18px; padding: 21px 22px 22px; }
     .field { display: grid; gap: 8px; }
+    .field-help { margin: 0 0 12px; color: var(--muted); line-height: 1.5; }
     .field-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
     label, .label { color: #cad5df; font-size: 13px; font-weight: 650; }
     .value-badge { min-width: 58px; padding: 3px 7px; color: var(--accent); border-radius: 7px; background: rgb(56 230 197 / 8%); font: 650 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; }
@@ -653,6 +654,7 @@
             </div>
 
             <div class="rain-fields" id="studioRainFields" hidden>
+              <p class="field-help">Dieci ore in 52×16 pixel: l’ora d’arrivo è in alto, le quantità sono sotto. Il rosa segnala pioggia intensa; l’ambra indica probabilità senza quantità prevista. L’anteprima usa dati di esempio.</p>
               <div class="three-fields">
                 <div class="field"><label for="studioChartType">Grafico</label><select id="studioChartType"><option value="barChart">Barre</option><option value="lineChart">Linea</option></select></div>
                 <div class="field"><label for="studioChartColor">Colore grafico</label><input id="studioChartColor" type="color" value="#4db8ff"></div>
@@ -1531,7 +1533,8 @@
       "Schermate e titoli salvati": "Screens and titles saved",
       "Stato aggiornato": "Status refreshed",
       "{label}: {frames} fotogrammi, {width}×{height}": "{label}: {frames} frames, {width}×{height}",
-      "Le previsioni di pioggia usano il loro layout a grafico.": "Rain forecasts use their chart layout.",
+      "Le previsioni di pioggia usano una timeline 52×16 dedicata.": "Rain forecasts use a dedicated 52×16 timeline.",
+      "Dieci ore in 52×16 pixel: l’ora d’arrivo è in alto, le quantità sono sotto. Il rosa segnala pioggia intensa; l’ambra indica probabilità senza quantità prevista. L’anteprima usa dati di esempio.": "Ten hours in 52×16 pixels: arrival time above, amounts below. Pink marks heavy rain; amber marks rain probability without a forecast amount. The preview uses sample data.",
       "Il titolo resta fermo in alto e soltanto il valore scorre quando serve.": "The title remains fixed at the top and only the value scrolls when needed.",
       "Il layout a due righe è disponibile con AWTRIX fedele 1×, Silkscreen e Scientifica minuscolo.": "The two-line layout is available with AWTRIX faithful 1×, Silkscreen and lowercase Scientifica.",
       "Ciao!": "Hello!",
@@ -2867,7 +2870,7 @@
       });
       $("studioDisplayTitleField").hidden = selected !== "labelled";
       $("templateHelp").textContent = rain
-        ? t("Le previsioni di pioggia usano il loro layout a grafico.")
+        ? t("Le previsioni di pioggia usano una timeline 52×16 dedicata.")
         : t("Il modello cambia solo questa app. Contenuto e colori restano personalizzabili.");
     }
 
