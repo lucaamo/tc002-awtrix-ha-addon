@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.36
+
+- Store full birth dates for Birthday apps and calculate the age on the matching
+  day in the bridge time zone. Messages support `{name}`, `{age}` and
+  `{ageUnit}` (Italian singular/plural); the default states the age explicitly.
+- Require a full birth date for new manual and CSV entries. Previously saved
+  month/day-only entries remain readable, but need a year for age messages.
+- Update the downloadable CSV example and use a longer default display time
+  for birthday messages.
+
 ## 0.2.35
 
 - Give Birthday list actions full-size buttons and a responsive layout so

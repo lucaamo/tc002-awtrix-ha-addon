@@ -19,10 +19,11 @@ Do not uninstall or disable it until its options and `/data` content have been
 copied to the repository-installed app and the new app has passed a live check.
 The two apps cannot run together on the same TCP/UDP ports and MQTT identity.
 
-Release 0.2.35 adds private birthday lists to App Studio, with manual entry,
-CSV upload, personalized messages, and day-only carousel visibility. It includes
-clearer controls and a downloadable sample CSV.
-Source changes: private development commits `462306a`, `2b171d1`, and `f9158be`.
+Release 0.2.36 adds full birth dates and age-aware birthday messages to App Studio.
+The existing CSV template now includes a birth year; old month/day-only entries
+remain readable until migrated.
+Source changes: private development commits `462306a`, `2b171d1`, `f9158be`,
+and `5b2b475`.
 It is based on development commit `ee5763d`.
 
 The repository also includes a one-time importer for existing local installations.

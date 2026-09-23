@@ -335,17 +335,24 @@ def validate_definition(payload: Any, *, expected_name: str | None = None) -> di
         if not isinstance(entry, dict) or set(entry) != {"name", "date", "message"}:
             raise validation("Birthday must contain name, date and message", field)
         person = _text(entry["name"], f"{field}.name", 48).strip()
-        birthday_date = _text(entry["date"], f"{field}.date", 5)
+        birthday_date = _text(entry["date"], f"{field}.date", 10)
         message = _text(entry["message"], f"{field}.message", 160).strip()
         if not person or any(ord(char) < 32 for char in person + message):
             raise validation("Enter a single-line name and message", field)
         try:
-            if not re.fullmatch(r"\d{2}-\d{2}", birthday_date):
+            if re.fullmatch(r"\d{4}-\d{2}-\d{2}", birthday_date):
+                birth_date = date.fromisoformat(birthday_date)
+                if birth_date > datetime.now(UTC).date():
+                    raise ValueError("Birth date is in the future")
+            elif re.fullmatch(r"\d{2}-\d{2}", birthday_date):
+                month, day = birthday_date.split("-")
+                date(2000, int(month), int(day))
+                if "{age}" in message or "{ageUnit}" in message:
+                    raise validation("Add the birth year to use age in a message", f"{field}.date")
+            else:
                 raise ValueError("Invalid date format")
-            date_value = birthday_date.split("-")
-            date(2000, int(date_value[0]), int(date_value[1]))
         except ValueError as error:
-            raise validation("Use MM-DD for the birthday", f"{field}.date") from error
+            raise validation("Use a valid YYYY-MM-DD birth date", f"{field}.date") from error
         validated_birthdays.append({"name": person, "date": birthday_date, "message": message})
     candidate["birthdays"] = validated_birthdays if candidate["sourceType"] == "birthday" else []
     for field in (
@@ -709,6 +716,20 @@ class StudioManager:
             value = f"{hours:02d}:{minutes:02d}"
         return f"{definition['countdownTitle']} {value}" if definition["showTitle"] else value
 
+    @staticmethod
+    def _birthday_message(entry: dict[str, str], today: date) -> str:
+        birth_date = date.fromisoformat(entry["date"]) if len(entry["date"]) == 10 else None
+        if birth_date is None:
+            template = entry["message"] or "Buon compleanno {name}!"
+            return template.replace("{name}", entry["name"])
+        age = today.year - birth_date.year
+        template = entry["message"] or "Oggi è il compleanno di {name}. Compie {age} {ageUnit}!"
+        return (
+            template.replace("{name}", entry["name"])
+            .replace("{ageUnit}", "anno" if age == 1 else "anni")
+            .replace("{age}", str(age))
+        )
+
     async def _resolved_spec(self, definition: dict[str, Any]) -> tuple[dict[str, Any], Any]:
         source_type = definition["sourceType"]
         if source_type == "countdown":
@@ -716,13 +737,12 @@ class StudioManager:
             return self._spec(definition, text, text_override=text), text
         if source_type == "birthday":
             now = datetime.now(ZoneInfo(self.engine.config.timezone))
-            today = now.strftime("%m-%d")
-            matching = [entry for entry in definition["birthdays"] if entry["date"] == today]
+            today = now.date()
+            matching = [entry for entry in definition["birthdays"] if entry["date"][-5:] == today.strftime("%m-%d")]
             if not matching:
                 raise unavailable("No birthday today")
             entry = matching[(now.hour * 60 + now.minute) % len(matching)]
-            message = entry["message"] or "Buon compleanno {name}!"
-            text = message.replace("{name}", entry["name"])
+            text = self._birthday_message(entry, today)
             return self._spec(definition, text, text_override=text), text
 
         entity = await self._fetch_entity(definition["entityId"])
@@ -1124,8 +1144,8 @@ class StudioManager:
                 )
         elif definition["sourceType"] == "birthday":
             entry = definition["birthdays"][0]
-            message = entry["message"] or "Buon compleanno {name}!"
-            spec = self._spec(definition, entry["name"], text_override=message.replace("{name}", entry["name"]))
+            today = datetime.now(ZoneInfo(self.engine.config.timezone)).date()
+            spec = self._spec(definition, entry["name"], text_override=self._birthday_message(entry, today))
         else:
             spec = self._spec(definition, sample_value, unit)
         return self._render_preview_spec(definition["name"], spec)

@@ -22,6 +22,18 @@ playlist URI, volume step and long-press threshold. With the native companion,
 the knob and rocker become play/pause, next/previous and Sonos volume controls
 while a dedicated now-playing screen pauses the normal carousel.
 
+## 0.2.36
+
+Birthday entries now take a full birth date (`YYYY-MM-DD`), so `{age}` can show
+the age reached on that birthday. `{ageUnit}` renders `anno` for one year and
+`anni` otherwise. With an empty custom message, the display says “Oggi è il
+compleanno di {name}. Compie {age} {ageUnit}!” Birthday screens default to 45
+seconds so long messages can scroll across the 52×16 panel. The sample CSV
+uses full birth dates. Existing month/day-only entries continue to display
+their old messages until you add the year; editing those entries requires the
+full date. Birth dates stay in the add-on's private state, but Studio JSON
+exports contain them and should be kept private.
+
 ## 0.2.35
 
 Birthday list controls are easier to read in Home Assistant. Use **Scarica CSV
@@ -37,9 +49,9 @@ by Home Assistant.
 ## 0.2.33
 
 App Studio includes a Birthday source. Add people and personalized messages
-manually or upload a local UTF-8 CSV with the header `name,date,message` and
-dates in `MM-DD` or `YYYY-MM-DD` form. Only month and day are stored, and
-`{name}` inserts each person's name in the message. The app enters the carousel
+manually or upload a local UTF-8 CSV with the header `name,date,message`.
+This first release stored month and day only; 0.2.36 adds the birth year and
+age calculation. `{name}` inserts each person's name. The app enters the carousel
 only on a matching date in the bridge time zone; multiple matching messages
 rotate once per minute. February 29 appears only in leap years. Lists live in
 the add-on's private state, never in this repository. A Studio JSON export

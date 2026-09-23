@@ -270,7 +270,7 @@
     .studio-preview-head strong { font-size: 13px; }
     .studio-form { display: grid; gap: 16px; }
     .three-fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 13px; }
-    .birthday-row { display: grid; grid-template-columns: minmax(0, 1fr) 130px minmax(0, 1.5fr) 35px; gap: 10px; align-items: end; margin: 10px 0; }
+    .birthday-row { display: grid; grid-template-columns: minmax(0, 1fr) 160px minmax(0, 1.5fr) 35px; gap: 10px; align-items: end; margin: 10px 0; }
     .birthday-row .field { min-width: 0; }
     .birthday-row .mini { margin-bottom: 5px; }
     .birthday-actions { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; margin: 16px 0 10px; }
@@ -702,7 +702,7 @@
             </div>
 
             <div id="studioBirthdayFields" hidden>
-              <p class="field-help">L'app compare solo nel giorno del compleanno, secondo il fuso orario del bridge. Il messaggio scorre sul display; usa {name} per inserire il nome. Il 29 febbraio compare solo negli anni bisestili.</p>
+              <p class="field-help">Inserisci la data completa di nascita. L'app compare solo nel giorno del compleanno, secondo il fuso orario del bridge. Nel messaggio usa {name}, {age} e {ageUnit} (anno/anni). Il 29 febbraio compare solo negli anni bisestili.</p>
               <div id="studioBirthdayList"></div>
               <div class="birthday-actions">
                 <button type="button" class="birthday-action" id="studioBirthdayAdd">Aggiungi compleanno</button>
@@ -710,7 +710,7 @@
                 <input id="studioBirthdayUpload" type="file" accept=".csv,text/csv" hidden>
                 <button type="button" class="birthday-action" id="studioBirthdayExample">Scarica CSV di esempio</button>
               </div>
-              <small>CSV UTF-8 con intestazione name,date,message. Data nel formato MM-DD oppure YYYY-MM-DD; l'anno non viene salvato. Il caricamento aggiunge le righe alla lista.</small>
+              <small>CSV UTF-8 con intestazione name,date,message e data AAAA-MM-GG. Le vecchie voci senza anno restano leggibili: aggiungi l'anno per mostrare l'età. Il file caricato resta sul tuo computer; un export JSON dello Studio include invece le date salvate.</small>
             </div>
 
             <div class="switch-row" id="studioCompactField" hidden><div><div class="label">Layout compatto TC002</div><small>Le informazioni principali in due righe leggibili sul pannello 52×16. Le app già salvate mantengono il layout precedente.</small></div><label class="switch"><input id="studioCompactLayout" type="checkbox" checked><span></span></label></div>
@@ -1616,18 +1616,19 @@
       "Compleanni": "Birthdays",
       "Messaggi nel giorno speciale": "Messages on the special day",
       "Nome": "Name",
-      "Data (MM-GG)": "Date (MM-DD)",
+      "Data di nascita (AAAA-MM-GG)": "Birth date (YYYY-MM-DD)",
       "Messaggio": "Message",
       "Aggiungi compleanno": "Add birthday",
       "Carica CSV": "Upload CSV",
       "Scarica CSV di esempio": "Download sample CSV",
       "Rimuovi compleanno": "Remove birthday",
-      "Buon compleanno {name}!": "Happy birthday {name}!",
+      "Oggi è il compleanno di {name}. Compie {age} {ageUnit}!": "Today is {name}'s birthday. Turning {age} {ageUnit}!",
       "Massimo 100 compleanni": "Maximum 100 birthdays",
       "CSV troppo grande": "CSV file is too large",
       "CSV non valido: virgolette non chiuse": "Invalid CSV: unclosed quote",
       "Usa le colonne name,date,message": "Use the name,date,message columns",
       "Riga CSV {line} non valida": "Invalid CSV row {line}",
+      "Usa una data completa AAAA-MM-GG": "Use a full YYYY-MM-DD date",
       "Il CSV deve contenere da 1 a 100 compleanni": "The CSV must contain 1 to 100 birthdays",
       "{count} compleanni aggiunti": "{count} birthdays added",
       "in attesa": "waiting",
@@ -2287,6 +2288,7 @@
     function showStudioSourceFields() {
       const type = $("studioSourceType").value;
       if (type === "birthday" && !$("studioBirthdayList").children.length) addStudioBirthday();
+      if (type === "birthday" && !state.studioEditingName && $("studioDuration").value === "10") $("studioDuration").value = "45";
       const compact = ["weather", "calendar", "todo"].includes(type) && $("studioCompactLayout").checked;
       document.querySelectorAll("[data-studio-source]").forEach(button => {
         button.setAttribute("aria-pressed", String(button.dataset.studioSource === type));
@@ -2307,7 +2309,13 @@
       syncTemplatePicker();
       $("studioEntityId").required = needsEntity;
       $("studioTargetDateTime").required = type === "countdown";
-      $("studioBirthdayList").querySelectorAll(".birthday-name, .birthday-date").forEach(input => { input.required = type === "birthday"; });
+      $("studioBirthdayList").querySelectorAll(".birthday-name, .birthday-date").forEach(input => {
+        input.required = type === "birthday";
+        if (input.classList.contains("birthday-date")) {
+          input.pattern = type === "birthday" ? "\\d{4}-\\d{2}-\\d{2}" : "";
+          input.title = t("Usa una data completa AAAA-MM-GG");
+        }
+      });
       const entityOnly = type === "entity";
       const list = ["calendar", "todo"].includes(type);
       for (const id of ["studioAttribute", "studioSuffix", "studioSample", "studioUseEntityUnit"]) $(id).closest(".field, .switch-row").hidden = !entityOnly;
@@ -2325,13 +2333,14 @@
       if (list.children.length >= 100) { showToast(t("Massimo 100 compleanni"), true); return; }
       const row = document.createElement("div");
       row.className = "birthday-row three-fields";
-      const fields = [["birthday-name", "Nome", "text", 48], ["birthday-date", "Data (MM-GG)", "text", 5], ["birthday-message", "Messaggio", "text", 160]];
+      const fields = [["birthday-name", "Nome", "text", 48], ["birthday-date", "Data di nascita (AAAA-MM-GG)", "text", 10], ["birthday-message", "Messaggio", "text", 160]];
       fields.forEach(([className, label, type, length]) => {
         const wrapper = document.createElement("label"); wrapper.className = "field"; wrapper.textContent = t(label);
         const input = document.createElement("input"); input.className = className; input.type = type; input.maxLength = length;
         input.value = entry[className === "birthday-name" ? "name" : className === "birthday-date" ? "date" : "message"] || "";
         input.required = $("studioSourceType").value === "birthday" && className !== "birthday-message";
-        if (className === "birthday-message") input.placeholder = t("Buon compleanno {name}!");
+        if (className === "birthday-date") { input.placeholder = "1985-05-12"; input.pattern = "\\d{4}-\\d{2}-\\d{2}"; input.title = t("Usa una data completa AAAA-MM-GG"); }
+        if (className === "birthday-message") input.placeholder = t("Oggi è il compleanno di {name}. Compie {age} {ageUnit}!");
         wrapper.append(input); row.append(wrapper);
       });
       const remove = document.createElement("button"); remove.type = "button"; remove.className = "mini delete"; remove.textContent = "×";
@@ -2360,9 +2369,9 @@
       return rows.map((values, index) => {
         if (values.length !== 3) throw new Error(t("Riga CSV {line} non valida", {line: index + 2}));
         const [name, dateValue, message] = values.map(value => value.trim());
-        const date = /^\d{4}-\d{2}-\d{2}$/.test(dateValue) ? dateValue.slice(5) : dateValue;
-        if (!name || !/^\d{2}-\d{2}$/.test(date) || name.length > 48 || message.length > 160) throw new Error(t("Riga CSV {line} non valida", {line: index + 2}));
-        return {name, date, message};
+        const date = /^\d{4}-\d{2}-\d{2}$/.test(dateValue) ? new Date(`${dateValue}T00:00:00Z`) : null;
+        if (!name || !date || Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== dateValue || name.length > 48 || message.length > 160) throw new Error(t("Riga CSV {line} non valida", {line: index + 2}));
+        return {name, date: dateValue, message};
       });
     }
 
@@ -2378,7 +2387,7 @@
     }
 
     function downloadStudioBirthdayExample() {
-      const csv = '\uFEFFname,date,message\r\nAlex,05-12,"Buon compleanno {name}!"\r\nSam,11-03,"Tanti auguri {name}!"\r\n';
+      const csv = '\uFEFFname,date,message\r\nAlex,1992-05-12,"Oggi è il compleanno di {name}. Compie {age} {ageUnit}!"\r\nSam,1988-11-03,"Tanti auguri {name} per i tuoi {age} anni!"\r\n';
       const url = URL.createObjectURL(new Blob([csv], {type: "text/csv;charset=utf-8"}));
       const link = document.createElement("a");
       link.href = url;
