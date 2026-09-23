@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.37
+
+- Use one fixed age-aware birthday message per language (Italian or English),
+  selected in App Studio. Remove per-person message editing and export.
+- Change the sample CSV to `name,date`; accept older three-column CSV files
+  while discarding their message column. Discard previously saved custom
+  messages during migration. Require a birth year before showing the age.
+
 ## 0.2.36
 
 - Store full birth dates for Birthday apps and calculate the age on the matching

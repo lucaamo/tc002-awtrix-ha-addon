@@ -22,6 +22,18 @@ playlist URI, volume step and long-press threshold. With the native companion,
 the knob and rocker become play/pause, next/previous and Sonos volume controls
 while a dedicated now-playing screen pauses the normal carousel.
 
+## 0.2.37
+
+Birthday entries contain only a name and full birth date (`YYYY-MM-DD`). App
+Studio uses one fixed message for everyone, in the selected Italian or English
+language: “Oggi è il compleanno di Nome. Compie XX anni!” / “Today is Name's
+birthday. Name turns XX years old!” Download a two-column `name,date` CSV
+example in App Studio. Older CSV files with a `message` column remain importable,
+but those messages are ignored; saved custom birthday messages are removed when
+the app starts. A saved month/day-only entry needs a birth year before it can
+display an age. Birth dates remain in private add-on state; Studio JSON exports
+include them and should be kept private.
+
 ## 0.2.36
 
 Birthday entries now take a full birth date (`YYYY-MM-DD`), so `{age}` can show
