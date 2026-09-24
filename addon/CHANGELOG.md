@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.42
+
+AWTRIX NG Sonos Remote now includes the selected Home Assistant
+`media_player` with every command. The bridge validates that entity, routes
+playback and volume commands to it, and returns the selected player's metadata
+over a separate v2 MQTT topic. New installations start without a private
+player default; existing saved selections are preserved.
+
 ## 0.2.41
 
 App Studio now exports every enabled page as its own volatile AWTRIX NG app

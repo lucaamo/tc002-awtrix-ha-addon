@@ -19,7 +19,7 @@ VOLUME_SETTLE_MS = 3000
 
 DEFAULT_SONOS_SETTINGS: dict[str, Any] = {
     "enabled": True,
-    "playerEntityId": "media_player.sonos_soggiorno",
+    "playerEntityId": "",
     "playlistMediaContentId": "",
     "playlistMediaContentType": "playlist",
     "volumeStep": 5,
@@ -284,6 +284,95 @@ class SonosController:
         async with self._lock:
             await self._refresh_unlocked()
 
+    async def remote_command(self, body: Any) -> dict[str, Any]:
+        """Execute one validated command received from the AWTRIX NG remote."""
+        if not isinstance(body, dict):
+            raise validation("Sonos remote command must be an object")
+        action = body.get("action")
+        if action not in {
+            "refresh",
+            "play_pause",
+            "next",
+            "previous",
+            "volume",
+            "delta",
+            "play_media",
+        }:
+            raise validation("Unknown Sonos remote action", "action")
+        player = body.get("player_entity_id") or self.settings["playerEntityId"]
+        if not isinstance(player, str) or not player.startswith("media_player."):
+            raise validation("Choose a media_player entity", "player_entity_id")
+        player = player.strip()
+
+        async with self._lock:
+            current = await self._fetch_entity(player)
+            if not isinstance(current, dict):
+                raise validation("Home Assistant did not return the selected player")
+            if player != self.settings["playerEntityId"]:
+                self.patch_settings({"playerEntityId": player})
+
+            if action == "play_pause":
+                await self._call_service(
+                    "media_player", "media_play_pause", {"entity_id": player}
+                )
+                self.session_started = True
+            elif action == "next":
+                await self._call_service(
+                    "media_player", "media_next_track", {"entity_id": player}
+                )
+                self.session_started = True
+            elif action == "previous":
+                await self._call_service(
+                    "media_player", "media_previous_track", {"entity_id": player}
+                )
+                self.session_started = True
+            elif action in {"volume", "delta"}:
+                attributes = current.get("attributes")
+                attributes = attributes if isinstance(attributes, dict) else {}
+                level = attributes.get("volume_level")
+                observed = (
+                    round(float(level) * 100)
+                    if isinstance(level, (int, float)) and not isinstance(level, bool)
+                    else self.volume
+                )
+                raw = body.get("value")
+                if not isinstance(raw, int) or isinstance(raw, bool):
+                    raise validation("Volume must be an integer", "value")
+                if action == "delta" and not -25 <= raw <= 25:
+                    raise validation("Volume delta must be between -25 and 25", "value")
+                if action == "volume" and not 0 <= raw <= 100:
+                    raise validation("Volume must be between 0 and 100", "value")
+                target = max(0, min(100, observed + raw if action == "delta" else raw))
+                await self._call_service(
+                    "media_player",
+                    "volume_set",
+                    {"entity_id": player, "volume_level": target / 100},
+                )
+                self.volume = target
+                self._volume_pending_until_ms = self.engine.monotonic_ms() + VOLUME_SETTLE_MS
+            elif action == "play_media":
+                content_id = body.get("media_content_id")
+                content_type = body.get("media_content_type")
+                if not isinstance(content_id, str) or not content_id.strip():
+                    raise validation("Media content is required", "media_content_id")
+                if not isinstance(content_type, str) or not content_type.strip():
+                    raise validation("Media content type is required", "media_content_type")
+                await self._call_service(
+                    "media_player",
+                    "play_media",
+                    {
+                        "entity_id": player,
+                        "media_content_id": content_id.strip(),
+                        "media_content_type": content_type.strip(),
+                    },
+                )
+                self.session_started = True
+
+            updated = await self._fetch_entity(player)
+            self._apply_entity_state(updated)
+            self.last_error = None
+            return self.state()
+
     async def _refresh_unlocked(self) -> None:
         if not self.active:
             return
@@ -292,25 +381,7 @@ class SonosController:
             value = await self._fetch_entity(player)
             if not self.active or player != self.settings["playerEntityId"]:
                 return
-            attributes = value.get("attributes")
-            if not isinstance(attributes, dict):
-                attributes = {}
-            self.player_state = str(value.get("state") or "unknown")
-            self.friendly_name = str(attributes.get("friendly_name") or "Sonos")
-            self.artist = str(attributes.get("media_artist") or "")
-            self.title = str(
-                attributes.get("media_title")
-                or attributes.get("media_channel")
-                or attributes.get("source")
-                or ""
-            )
-            level = attributes.get("volume_level")
-            if isinstance(level, (int, float)) and not isinstance(level, bool):
-                observed = max(0, min(100, round(float(level) * 100)))
-                if observed == self.volume:
-                    self._volume_pending_until_ms = 0
-                if self.engine.monotonic_ms() >= self._volume_pending_until_ms:
-                    self.volume = observed
+            self._apply_entity_state(value)
             self.last_error = None
         except BridgeError as error:
             self.last_error = error.message
@@ -323,6 +394,27 @@ class SonosController:
         ):
             return
         self._render()
+
+    def _apply_entity_state(self, value: dict[str, Any]) -> None:
+        attributes = value.get("attributes")
+        if not isinstance(attributes, dict):
+            attributes = {}
+        self.player_state = str(value.get("state") or "unknown")
+        self.friendly_name = str(attributes.get("friendly_name") or "Sonos")
+        self.artist = str(attributes.get("media_artist") or "")
+        self.title = str(
+            attributes.get("media_title")
+            or attributes.get("media_channel")
+            or attributes.get("source")
+            or ""
+        )
+        level = attributes.get("volume_level")
+        if isinstance(level, (int, float)) and not isinstance(level, bool):
+            observed = max(0, min(100, round(float(level) * 100)))
+            if observed == self.volume:
+                self._volume_pending_until_ms = 0
+            if self.engine.monotonic_ms() >= self._volume_pending_until_ms:
+                self.volume = observed
 
     def _require_active(self) -> None:
         if not self.active:

@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import threading
+from collections.abc import Callable
 from typing import Any
 
 import paho.mqtt.client as mqtt
@@ -16,15 +17,23 @@ from .errors import BridgeError, invalid_json, not_found
 from .http_service import ControlAdapter
 
 LOGGER = logging.getLogger(__name__)
+SONOS_REMOTE_ROOT = "tc002/sonos_remote/v2"
+SonosMessageHandler = Callable[[bytes], None]
 
 
 class MqttService:
     def __init__(
-        self, engine: Engine, config: MqttConfig, adapter: ControlAdapter | None = None
+        self,
+        engine: Engine,
+        config: MqttConfig,
+        adapter: ControlAdapter | None = None,
+        *,
+        sonos_message_handler: SonosMessageHandler | None = None,
     ) -> None:
         self.engine = engine
         self.config = config
         self.adapter = adapter
+        self.sonos_message_handler = sonos_message_handler
         self.loop: asyncio.AbstractEventLoop | None = None
         self.connected = False
         self._result_echoes: dict[str, int] = {}
@@ -73,6 +82,8 @@ class MqttService:
             client.subscribe(f"{self.adapter.prefix}/availability", qos=1)
         if self.engine.config.compatibility.extensions:
             client.subscribe(f"{self.config.prefix}/extensions/audio/volume/set", qos=1)
+        if self.sonos_message_handler is not None:
+            client.subscribe(f"{SONOS_REMOTE_ROOT}/command", qos=1)
         if self.loop is not None:
             self.loop.call_soon_threadsafe(self._connected)
 
@@ -113,6 +124,12 @@ class MqttService:
         if self.loop is None:
             return
         topic, payload = message.topic, bytes(message.payload)
+        if (
+            self.sonos_message_handler is not None
+            and topic == f"{SONOS_REMOTE_ROOT}/command"
+        ):
+            self.loop.call_soon_threadsafe(self.sonos_message_handler, payload)
+            return
         if topic == f"{self.config.prefix}/extensions/audio/volume/set":
             self.loop.call_soon_threadsafe(self._set_extension_volume, payload)
             return
@@ -331,6 +348,10 @@ class MqttService:
             qos=1,
             retain=retain,
         )
+
+    def publish_absolute(self, topic: str, value: str, *, retain: bool = True) -> None:
+        """Publish a value to an absolute topic outside the bridge prefix."""
+        self.client.publish(topic, value, qos=1, retain=retain)
 
     def clear_retained_pushed_app(self, name: str) -> None:
         """Remove a retained app command so it cannot recreate a deleted page."""

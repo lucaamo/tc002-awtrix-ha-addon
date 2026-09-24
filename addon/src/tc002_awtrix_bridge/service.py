@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from typing import Any
 
@@ -17,7 +18,7 @@ from .config import BridgeConfig
 from .engine import Engine
 from .errors import BridgeError
 from .http_service import HttpService
-from .mqtt_service import MqttService
+from .mqtt_service import SONOS_REMOTE_ROOT, MqttService
 from .ng_studio import NgStudioPublisher
 from .sonos import SonosController
 from .studio import StudioManager
@@ -59,7 +60,6 @@ class BridgeService:
                 self.adapter = UdpAdapter(config.adapter, on_event=self._adapter_event)
         else:
             self.adapter = MemoryAdapter()
-        self.mqtt = MqttService(self.engine, config.mqtt, self.adapter)
         self.studio = StudioManager(self.engine)
         self.studio_target: NgStudioPublisher | None = None
         if config.adapter.enabled and config.adapter.mode in {
@@ -78,6 +78,12 @@ class BridgeService:
             call_service=self.studio.call_service,
             list_entities=self.studio.list_entities,
         )
+        self.mqtt = MqttService(
+            self.engine,
+            config.mqtt,
+            self.adapter,
+            sonos_message_handler=self._sonos_mqtt_message,
+        )
         self.http = HttpService(
             self.engine,
             config.http,
@@ -94,6 +100,60 @@ class BridgeService:
         self._notification_audio_active = False
         self._button_pressed_ms: dict[str, int] = {}
         self._sonos_tasks: set[asyncio.Task[None]] = set()
+
+    def _sonos_mqtt_message(self, payload: bytes) -> None:
+        task = asyncio.create_task(
+            self._handle_sonos_mqtt_message(payload), name="sonos-mqtt-remote"
+        )
+        self._sonos_tasks.add(task)
+        task.add_done_callback(self._sonos_tasks.discard)
+
+    async def _handle_sonos_mqtt_message(self, payload: bytes) -> None:
+        try:
+            try:
+                decoded = payload.decode("utf-8")
+            except UnicodeDecodeError as error:
+                raise ValueError("Sonos command must be UTF-8") from error
+            if decoded.lstrip().startswith("{"):
+                body = json.loads(decoded)
+            else:
+                legacy = {
+                    "refresh": {"action": "refresh"},
+                    "play_pause": {"action": "play_pause"},
+                    "next": {"action": "next"},
+                    "previous": {"action": "previous"},
+                    "volume_up": {"action": "delta", "value": 5},
+                    "volume_down": {"action": "delta", "value": -5},
+                }
+                body = legacy.get(decoded.strip())
+                if body is None:
+                    raise ValueError("Unknown legacy Sonos command")
+            state = await self.sonos.remote_command(body)
+            self._publish_sonos_remote_state(state)
+        except (BridgeError, ValueError, json.JSONDecodeError) as error:
+            LOGGER.warning("Ignored invalid Sonos MQTT command: %s", error)
+            self.mqtt.publish_absolute(
+                f"{SONOS_REMOTE_ROOT}/state/error", str(error)[:240], retain=True
+            )
+        except Exception as error:
+            LOGGER.exception("Unexpected Sonos MQTT remote failure")
+            self.mqtt.publish_absolute(
+                f"{SONOS_REMOTE_ROOT}/state/error", str(error)[:240], retain=True
+            )
+
+    def _publish_sonos_remote_state(self, state: dict[str, Any]) -> None:
+        values = {
+            "artist": str(state.get("artist") or ""),
+            "title": str(state.get("title") or ""),
+            "playing": str(state.get("playerState") or "unknown"),
+            "volume": str(int(state.get("volume") or 0)),
+            "player_name": str(state.get("friendlyName") or "Sonos"),
+            "error": str(state.get("lastError") or ""),
+        }
+        for name, value in values.items():
+            self.mqtt.publish_absolute(
+                f"{SONOS_REMOTE_ROOT}/state/{name}", value, retain=True
+            )
 
     async def start(self) -> None:
         await self.adapter.start()
