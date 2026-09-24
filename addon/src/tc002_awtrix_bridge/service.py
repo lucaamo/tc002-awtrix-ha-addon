@@ -4,7 +4,13 @@ import asyncio
 import logging
 from typing import Any
 
-from .adapter import MemoryAdapter, StockHttpAdapter, UdpAdapter
+from .adapter import (
+    AwtrixNgHttpAdapter,
+    AwtrixNgMqttAdapter,
+    MemoryAdapter,
+    StockHttpAdapter,
+    UdpAdapter,
+)
 from .config import BridgeConfig
 from .engine import Engine
 from .errors import BridgeError
@@ -32,10 +38,20 @@ class BridgeService:
     def __init__(self, config: BridgeConfig) -> None:
         self.config = config
         self.engine = Engine(config)
-        self.adapter: UdpAdapter | StockHttpAdapter | MemoryAdapter
+        self.adapter: (
+            UdpAdapter
+            | StockHttpAdapter
+            | AwtrixNgHttpAdapter
+            | AwtrixNgMqttAdapter
+            | MemoryAdapter
+        )
         if config.adapter.enabled:
             if config.adapter.mode == "stock_http":
                 self.adapter = StockHttpAdapter(config.adapter, on_event=self._adapter_event)
+            elif config.adapter.mode == "awtrix_ng_http":
+                self.adapter = AwtrixNgHttpAdapter(config.adapter, on_event=self._adapter_event)
+            elif config.adapter.mode == "awtrix_ng_mqtt":
+                self.adapter = AwtrixNgMqttAdapter(config.adapter, on_event=self._adapter_event)
             else:
                 self.adapter = UdpAdapter(config.adapter, on_event=self._adapter_event)
         else:
@@ -91,8 +107,8 @@ class BridgeService:
         await self.http.stop()
         await self.sonos.stop()
         await self.studio.stop()
-        await self.mqtt.stop()
         await self.adapter.stop()
+        await self.mqtt.stop()
 
     async def run_forever(self) -> None:
         await self.start()

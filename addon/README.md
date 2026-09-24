@@ -1,5 +1,12 @@
 # TC002 AWTRIX Bridge add-on
 
+For a TC002 running AWTRIX NG, set `adapter_mode` to `awtrix_ng_mqtt` and
+`tc002_ng_mqtt_prefix` to the prefix configured in NG. Both the add-on and NG
+must connect to the same MQTT broker. The bridge becomes a pushed NG display
+app while its App Studio, HTTP API and MQTT interface remain on Home Assistant.
+This mode displays frames but does not provide the native companion's knob,
+rocker or audio controls.
+
 Self-contained Home Assistant add-on build context. Configure the TC002 address,
 MQTT broker/prefix and matching adapter token in the add-on options. The full
 behavior, security and installation guide is in the repository `docs` folder.

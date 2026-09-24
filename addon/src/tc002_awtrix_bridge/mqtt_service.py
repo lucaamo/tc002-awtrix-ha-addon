@@ -8,6 +8,7 @@ from typing import Any
 
 import paho.mqtt.client as mqtt
 
+from .adapter import AwtrixNgMqttAdapter
 from .config import MqttConfig
 from .discovery import home_assistant_discovery
 from .engine import Engine
@@ -39,6 +40,8 @@ class MqttService:
         self.client.on_disconnect = self._on_disconnect
         self.client.on_message = self._on_message
         self.client.reconnect_delay_set(min_delay=1, max_delay=60)
+        if isinstance(adapter, AwtrixNgMqttAdapter):
+            adapter.attach(self.client)
         engine.add_listener(self._state_changed)
 
     async def start(self) -> None:
@@ -66,6 +69,8 @@ class MqttService:
             LOGGER.warning("MQTT connection rejected: %s", reason_code)
             return
         client.subscribe(f"{self.config.prefix}/cmd/#", qos=1)
+        if isinstance(self.adapter, AwtrixNgMqttAdapter):
+            client.subscribe(f"{self.adapter.prefix}/availability", qos=1)
         if self.engine.config.compatibility.extensions:
             client.subscribe(f"{self.config.prefix}/extensions/audio/volume/set", qos=1)
         if self.loop is not None:
@@ -89,8 +94,19 @@ class MqttService:
     def _disconnected(self) -> None:
         self.connected = False
         self.engine.mqtt_connected = False
+        if isinstance(self.adapter, AwtrixNgMqttAdapter):
+            self.adapter.set_online(False)
 
     def _on_message(self, client: mqtt.Client, userdata: Any, message: mqtt.MQTTMessage) -> None:
+        if (
+            isinstance(self.adapter, AwtrixNgMqttAdapter)
+            and message.topic == f"{self.adapter.prefix}/availability"
+        ):
+            if self.loop is not None:
+                self.loop.call_soon_threadsafe(
+                    self.adapter.set_online, message.payload == b"online"
+                )
+            return
         if self._consume_result_echo(message.topic):
             LOGGER.debug("Ignored locally published MQTT result echo on %s", message.topic)
             return
@@ -320,6 +336,4 @@ class MqttService:
         """Remove a retained app command so it cannot recreate a deleted page."""
         if not self.config.enabled:
             return
-        self.client.publish(
-            f"{self.config.prefix}/cmd/apps/pushed/{name}", b"", qos=1, retain=True
-        )
+        self.client.publish(f"{self.config.prefix}/cmd/apps/pushed/{name}", b"", qos=1, retain=True)

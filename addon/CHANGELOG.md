@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.39
+
+Added an AWTRIX NG MQTT display adapter for TC002. It publishes complete 52×16
+bridge frames to a pushed app through the configured broker, selects the app
+when NG comes online, and removes it when the bridge stops. The bridge uses
+NG's retained availability topic for device health and does not depend on the
+NG HTTP API. Set `adapter_mode` to `awtrix_ng_mqtt` and
+`tc002_ng_mqtt_prefix` to the prefix configured on NG.
+
 ## 0.2.38
 
 - Let App Studio choose one carousel timing rule per app: elapsed seconds or a

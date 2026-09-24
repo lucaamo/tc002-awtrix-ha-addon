@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import io
+import json
 import logging
 import math
 import secrets
@@ -294,6 +295,144 @@ class StockHttpAdapter:
         if self._session is not None:
             await self._session.close()
             self._session = None
+
+
+def awtrix_ng_payload(frame: bytes, brightness: int, lifetime_ms: int) -> dict[str, Any]:
+    """Keep the bridge's 52x16 RGB frame intact in an NG pushed app."""
+    if len(frame) != FRAME_BYTES:
+        raise ValueError(f"frame must contain exactly {FRAME_BYTES} bytes")
+    if not 0 <= brightness <= 255:
+        raise ValueError("brightness must be between 0 and 255")
+    if brightness < 255:
+        frame = bytes((channel * brightness + 127) // 255 for channel in frame)
+    return {
+        "draw": [
+            ["bitmap", 0, 0, FRAME_WIDTH, FRAME_HEIGHT, base64.b64encode(frame).decode("ascii")]
+        ],
+        "lifetimeMs": lifetime_ms,
+        "lifetimeExpiry": "remove",
+    }
+
+
+class AwtrixNgHttpAdapter(StockHttpAdapter):
+    """Publish bridge frames to AWTRIX NG without changing its native apps."""
+
+    async def _post_frame(self, frame: bytes, brightness: int) -> None:
+        assert self._session is not None
+        lifetime_ms = max(1000, math.ceil(self.config.blackout_timeout * 1000))
+        payload = awtrix_ng_payload(frame, brightness, lifetime_ms)
+        url = f"{self.base_url}/api/v1/apps/pushed/{self.config.http_app}"
+        async with self._session.put(url, json=payload) as response:
+            result = await response.json(content_type=None)
+            if (
+                response.status != 200
+                or not isinstance(result, dict)
+                or result.get("ok") is not True
+            ):
+                raise ValueError(f"HTTP {response.status}: {result!r}")
+        self.sequence = (self.sequence + 1) & 0xFFFFFFFF
+        self._report_heartbeat({"transport": "awtrix_ng_http", "error": None})
+
+    async def _probe(self) -> None:
+        assert self._session is not None
+        async with self._session.get(f"{self.base_url}/api/v1/display/screen") as response:
+            screen = await response.json(content_type=None)
+            if response.status != 200 or not isinstance(screen, dict):
+                raise ValueError(f"HTTP {response.status}: invalid display response")
+            if screen.get("width") != FRAME_WIDTH or screen.get("height") != FRAME_HEIGHT:
+                raise ValueError("AWTRIX NG display is not 52x16")
+        async with self._session.get(f"{self.base_url}/api/v1/device") as response:
+            device = await response.json(content_type=None)
+            if response.status != 200 or not isinstance(device, dict):
+                raise ValueError(f"HTTP {response.status}: invalid device response")
+        data: dict[str, Any] = {"transport": "awtrix_ng_http", "error": None}
+        if isinstance(device.get("version"), str):
+            data["appVersion"] = device["version"]
+        if isinstance(device.get("ipAddress"), str):
+            data["ipAddress"] = device["ipAddress"]
+        self._report_heartbeat(data, force=True)
+
+
+class AwtrixNgMqttAdapter:
+    """Send coalesced bridge frames through the existing broker connection."""
+
+    def __init__(
+        self, config: AdapterConfig, *, on_event: Callable[[str, dict[str, Any]], None]
+    ) -> None:
+        self.config = config
+        self.on_event = on_event
+        self.client: Any = None
+        self.prefix = config.ng_mqtt_prefix
+        self.online = False
+        self.last_frame: bytes | None = None
+        self.last_brightness = -1
+        self.last_sent = 0.0
+        self.last_heartbeat = 0.0
+        self.switched = False
+        self.sequence = 0
+
+    async def start(self) -> None:
+        return None
+
+    async def stop(self) -> None:
+        if self.client is not None and self.online:
+            self.client.publish(f"{self.prefix}/cmd/apps/pushed/{self.config.http_app}", b"", qos=1)
+        self.online = False
+        self.client = None
+
+    def attach(self, client: Any) -> None:
+        self.client = client
+
+    def set_online(self, online: bool) -> None:
+        self.online = online
+        self.switched = False
+        self.last_frame = None
+        if online:
+            self.on_event("heartbeat", {"transport": "awtrix_ng_mqtt", "error": None})
+
+    def send_frame(self, frame: bytes, brightness: int) -> None:
+        if not self.online or self.client is None:
+            return
+        now = time.monotonic()
+        if now - self.last_heartbeat >= 2.0:
+            self.on_event("heartbeat", {"transport": "awtrix_ng_mqtt", "error": None})
+            self.last_heartbeat = now
+        interval = 1 / self.config.http_max_fps
+        refresh = max(1.0, self.config.blackout_timeout / 2)
+        if now - self.last_sent < interval:
+            return
+        if (
+            frame == self.last_frame
+            and brightness == self.last_brightness
+            and now - self.last_sent < refresh
+        ):
+            return
+        payload = awtrix_ng_payload(
+            frame, brightness, max(1000, math.ceil(self.config.blackout_timeout * 1000))
+        )
+        payload["durationMs"] = 3600000
+        topic = f"{self.prefix}/cmd/apps/pushed/{self.config.http_app}"
+        result = self.client.publish(
+            topic, json.dumps(payload, separators=(",", ":")), qos=0, retain=False
+        )
+        if result.rc != 0:
+            LOGGER.warning("AWTRIX NG MQTT frame publish failed: %s", result.rc)
+            return
+        if not self.switched:
+            self.client.publish(
+                f"{self.prefix}/cmd/apps/switch",
+                json.dumps({"name": self.config.http_app, "fast": True}),
+                qos=1,
+                retain=False,
+            )
+            self.switched = True
+        self.last_frame = frame
+        self.last_brightness = brightness
+        self.last_sent = now
+        self.sequence = (self.sequence + 1) & 0xFFFFFFFF
+
+    def send_control(self, command: str, data: dict[str, Any] | None = None) -> int:
+        return self.sequence
 
 
 class MemoryAdapter:

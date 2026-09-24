@@ -48,6 +48,7 @@ class AdapterConfig:
     token: str = ""
     http_port: int = 80
     http_app: str = "awtrix_bridge"
+    ng_mqtt_prefix: str = "awtrixNG"
     http_timeout: float = 3.0
     http_max_fps: int = 10
     heartbeat_timeout: float = 10.0
@@ -210,17 +211,25 @@ def load_config(path: str | Path) -> BridgeConfig:
     if not UID_RE.fullmatch(config.uid):
         raise validation("uid must match [A-Za-z0-9_-]{1,64}", "uid")
     if not config.mqtt.prefix or any(char in config.mqtt.prefix for char in "#+\0"):
-        raise validation("mqtt.prefix must be non-empty and contain no MQTT wildcards", "mqtt.prefix")
+        raise validation(
+            "mqtt.prefix must be non-empty and contain no MQTT wildcards", "mqtt.prefix"
+        )
     if not config.mqtt.home_assistant_prefix:
         raise validation("Must not be empty", "mqtt.home_assistant_prefix")
     if not config.adapter.device_host:
         raise validation("Must not be empty", "adapter.device_host")
-    if config.adapter.mode not in {"udp", "stock_http"}:
-        raise validation("Must be udp or stock_http", "adapter.mode")
-    if not UID_RE.fullmatch(config.adapter.http_app):
+    if config.adapter.mode not in {"udp", "stock_http", "awtrix_ng_http", "awtrix_ng_mqtt"}:
         raise validation(
-            "adapter.http_app must match [A-Za-z0-9_-]{1,64}", "adapter.http_app"
+            "Must be udp, stock_http, awtrix_ng_http or awtrix_ng_mqtt", "adapter.mode"
         )
+    if not config.adapter.ng_mqtt_prefix or any(
+        char in config.adapter.ng_mqtt_prefix for char in "#+\0"
+    ):
+        raise validation(
+            "Must be a non-empty MQTT prefix without wildcards", "adapter.ng_mqtt_prefix"
+        )
+    if not UID_RE.fullmatch(config.adapter.http_app):
+        raise validation("adapter.http_app must match [A-Za-z0-9_-]{1,64}", "adapter.http_app")
     try:
         ZoneInfo(config.timezone)
     except ZoneInfoNotFoundError as error:
