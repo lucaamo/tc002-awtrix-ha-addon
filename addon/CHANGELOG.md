@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.40
+
+The AWTRIX NG MQTT bridge app now remains in NG's normal carousel for ten
+seconds, then yields to the next app. This restores access to Berry apps such
+as Sonos Remote while the bridge continues rendering its own pages.
+
 ## 0.2.39
 
 Added an AWTRIX NG MQTT display adapter for TC002. It publishes complete 52×16

@@ -410,7 +410,8 @@ class AwtrixNgMqttAdapter:
         payload = awtrix_ng_payload(
             frame, brightness, max(1000, math.ceil(self.config.blackout_timeout * 1000))
         )
-        payload["durationMs"] = 3600000
+        # Let NG rotate to its other apps, including Berry controls such as Sonos.
+        payload["durationMs"] = 10000
         topic = f"{self.prefix}/cmd/apps/pushed/{self.config.http_app}"
         result = self.client.publish(
             topic, json.dumps(payload, separators=(",", ":")), qos=0, retain=False
