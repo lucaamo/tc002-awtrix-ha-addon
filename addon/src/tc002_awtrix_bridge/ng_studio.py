@@ -187,10 +187,16 @@ class NgStudioPublisher:
         names = [item["name"] for item in remote_items]
         current = [name for name in names if name in desired]
         wanted = [name for name in desired if name in current]
-        if not has_obsolete_reserved and (len(wanted) < 2 or current == wanted):
+        missing = [name for name in desired if name not in names]
+        if (
+            not has_obsolete_reserved
+            and not missing
+            and (len(wanted) < 2 or current == wanted)
+        ):
             return
         replacements = iter(wanted)
         order = [next(replacements) if name in desired else name for name in names]
+        order.extend(missing)
         disabled = [item["name"] for item in remote_items if item.get("enabled") is False]
         async with self._session.put(
             f"{self.base_url}/api/v1/apps/order",

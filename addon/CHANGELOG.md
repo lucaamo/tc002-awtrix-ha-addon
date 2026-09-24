@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.45
+
+Newly published App Studio pages are appended to the AWTRIX NG carousel on
+their first synchronization, while existing native and script app positions are
+preserved. This makes newly created Studio apps visible without a manual order
+edit in the device UI.
+
 ## 0.2.44
 
 Complete the readable App Studio migration by removing obsolete hashed names
