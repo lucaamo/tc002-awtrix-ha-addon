@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.2.41
+
+App Studio now exports every enabled page as its own volatile AWTRIX NG app
+when `adapter_mode` is `awtrix_ng_mqtt`. The add-on reconciles additions,
+updates, removals and Studio ordering over the device HTTP API while the
+existing MQTT adapter remains available for bridge notifications and legacy
+pages. Animated Studio pages refresh at the configured HTTP frame rate only
+while visible; inactive pages use low-rate lifetime refreshes.
+
+The Studio UI reports AWTRIX NG connection and per-app synchronization state,
+offers manual synchronization, and routes **Show** and **Save and show** to the
+physical NG carousel. `switchOnChange` also selects the exported page when its
+rendered content changes. Exported Studio pages are skipped inside the legacy
+aggregate bridge page so each appears only once in the NG carousel.
+
+New-install defaults no longer contain a deployment-specific UID, display
+name, MQTT prefix or private-network host address. Existing Home Assistant
+options are preserved during upgrades.
+
 ## 0.2.40
 
 The AWTRIX NG MQTT bridge app now remains in NG's normal carousel for ten

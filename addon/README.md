@@ -1,13 +1,5 @@
 # TC002 AWTRIX Bridge add-on
 
-For a TC002 running AWTRIX NG, set `adapter_mode` to `awtrix_ng_mqtt` and
-`tc002_ng_mqtt_prefix` to the prefix configured in NG. Both the add-on and NG
-must connect to the same MQTT broker. The bridge becomes a pushed NG display
-app in the normal carousel while its App Studio, HTTP API and MQTT interface
-remain on Home Assistant.
-This mode displays frames but does not provide the native companion's knob,
-rocker or audio controls.
-
 Self-contained Home Assistant add-on build context. Configure the TC002 address,
 MQTT broker/prefix and matching adapter token in the add-on options. The full
 behavior, security and installation guide is in the repository `docs` folder.
@@ -29,6 +21,16 @@ The **Modalità Sonos** section configures a Home Assistant media player,
 playlist URI, volume step and long-press threshold. With the native companion,
 the knob and rocker become play/pause, next/previous and Sonos volume controls
 while a dedicated now-playing screen pauses the normal carousel.
+
+For a TC002 running AWTRIX NG, choose `awtrix_ng_mqtt` as the adapter mode and
+enter NG's MQTT topic prefix in `tc002_ng_mqtt_prefix`. Both devices must use
+the same broker. Each enabled App Studio page is also exported as a separate,
+volatile NG app through the device HTTP API, so NG owns carousel navigation and
+the Studio UI can show, synchronize and remove pages on the physical display.
+The aggregate bridge page remains available for notifications and legacy pages,
+but excludes Studio pages to avoid duplicates. The native companion remains
+required for the bridge's original physical knob, rocker and audio controls;
+NG or a Berry app must implement those controls when NG firmware is installed.
 
 ## 0.2.38
 

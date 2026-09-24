@@ -19,7 +19,7 @@ VOLUME_SETTLE_MS = 3000
 
 DEFAULT_SONOS_SETTINGS: dict[str, Any] = {
     "enabled": True,
-    "playerEntityId": "",
+    "playerEntityId": "media_player.sonos_soggiorno",
     "playlistMediaContentId": "",
     "playlistMediaContentType": "playlist",
     "volumeStep": 5,

@@ -692,6 +692,24 @@ class Engine:
             self._changed("device")
         return result
 
+    def render_studio_app(
+        self, name: str, *, elapsed_ms: int = 0, wall_time: datetime | None = None
+    ) -> RenderResult:
+        """Render one Studio page without navigating or consuming notifications."""
+        page = self.pages.pages.get(name)
+        if page is None or page.origin != "studio" or name in self.pages.disabled:
+            raise not_found(f"Enabled Studio app not found: {name}", "name")
+        spec = self._page_spec(name, page.spec, wall_time)
+        if self.display.get("overlay") and "overlay" not in spec:
+            spec = {**spec, "overlay": self.display["overlay"]}
+        return self.renderer.render(
+            spec,
+            render_key=f"studio:{name}:{page.received_ms}",
+            elapsed_ms=max(0, elapsed_ms),
+            settings=self.settings,
+            indicators=self.indicators,
+        )
+
     def _rotate_if_due(self, now_ms: int) -> None:
         page = self.pages.current
         duration = int(page.spec.get("durationMs", self.settings.get("appDurationMs", 7000)))

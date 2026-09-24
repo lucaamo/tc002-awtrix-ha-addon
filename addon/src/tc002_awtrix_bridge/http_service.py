@@ -38,6 +38,14 @@ class ControlAdapter(Protocol):
     def send_control(self, command: str, data: dict[str, Any] | None = None) -> int: ...
 
 
+class StudioTarget(Protocol):
+    def document(self) -> dict[str, Any]: ...
+
+    async def sync_once(self) -> None: ...
+
+    async def show(self, name: str) -> None: ...
+
+
 @web.middleware
 async def error_middleware(request: web.Request, handler: Any) -> web.Response:
     try:
@@ -100,6 +108,7 @@ class HttpService:
         studio: StudioManager | None = None,
         app_delete_hook: Callable[[str], None] | None = None,
         sonos: SonosController | None = None,
+        studio_target: StudioTarget | None = None,
     ) -> None:
         self.engine = engine
         self.config = config
@@ -107,6 +116,7 @@ class HttpService:
         self.studio = studio
         self.app_delete_hook = app_delete_hook
         self.sonos = sonos
+        self.studio_target = studio_target
         self.app = web.Application(
             client_max_size=1_100_000,
             middlewares=[error_middleware, _auth_middleware(config), method_override_middleware],
@@ -176,7 +186,9 @@ class HttpService:
         router.add_post("/api/v1/files", self.upload_file)
         router.add_delete("/api/v1/files", self.delete_file)
         router.add_get("/api/v1/studio/apps", self.studio_apps)
+        router.add_post("/api/v1/studio/sync", self.studio_sync)
         router.add_get("/api/v1/studio/entities", self.studio_entities)
+        router.add_post("/api/v1/studio/apps/{name}/show", self.studio_show)
         router.add_get("/api/v1/studio/apps/{name}/preview", self.studio_live_preview)
         router.add_post("/api/v1/studio/apps/{name}/rename", self.studio_rename)
         router.add_post("/api/v1/studio/import", self.studio_import)
@@ -220,13 +232,14 @@ class HttpService:
         return web.json_response(body, status=status)
 
     async def health(self, request: web.Request) -> web.Response:
-        return web.json_response(
-            {
-                "ok": True,
-                "version": __version__,
-                "adapterConnected": self.engine.check_adapter_timeout(),
-            }
-        )
+        body = {
+            "ok": True,
+            "version": __version__,
+            "adapterConnected": self.engine.check_adapter_timeout(),
+        }
+        if self.studio_target is not None:
+            body["studioTarget"] = self.studio_target.document()
+        return web.json_response(body)
 
     async def notify(self, request: web.Request) -> web.Response:
         return self._ok(self.engine.notify(await self._json(request)))
@@ -585,7 +598,34 @@ class HttpService:
         return self._ok(result)
 
     async def studio_apps(self, request: web.Request) -> web.Response:
-        return web.json_response(self._authenticated_studio(request).document())
+        document = self._authenticated_studio(request).document()
+        document["target"] = (
+            self.studio_target.document()
+            if self.studio_target is not None
+            else {"enabled": False, "kind": "bridge", "connected": True}
+        )
+        return web.json_response(document)
+
+    async def studio_sync(self, request: web.Request) -> web.Response:
+        self._authenticated_studio(request)
+        if self.studio_target is None:
+            return web.json_response({"enabled": False, "kind": "bridge", "connected": True})
+        await self.studio_target.sync_once()
+        return web.json_response(self.studio_target.document())
+
+    async def studio_show(self, request: web.Request) -> web.Response:
+        studio = self._authenticated_studio(request)
+        name = request.match_info["name"]
+        if name not in studio.definitions:
+            raise not_found(f"Studio app not found: {name}", "name")
+        item = studio.item(name)
+        if not item["enabled"] or not item["present"]:
+            raise not_found(f"Studio app not found or disabled: {name}", "name")
+        if self.studio_target is not None:
+            await self.studio_target.show(name)
+        else:
+            self.engine.switch_app(name, fast=False)
+        return self._ok()
 
     async def studio_entities(self, request: web.Request) -> web.Response:
         studio = self._authenticated_studio(request)

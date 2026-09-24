@@ -610,6 +610,8 @@
 
           <p class="studio-preview-status" id="studioPreviewStatus" role="status">Completa i campi per vedere l’anteprima.</p>
           <div class="studio-tip" id="studioAccess">Verifico l’accesso a Home Assistant…</div>
+          <div class="studio-tip" id="studioTargetStatus" hidden></div>
+          <div class="form-actions" id="studioTargetActions" hidden><button class="btn" id="studioSyncTarget" type="button">Sincronizza AWTRIX NG</button></div>
 
           <form class="studio-form" id="studioForm">
             <p class="studio-step">1 · Scegli il contenuto</p>
@@ -963,7 +965,7 @@
           <div class="settings-tile"><span class="settings-tag available">Disponibile ora</span><h3>Ora e schermate</h3><p>Formato dell’ora, durata delle app e velocità di scorrimento. Il fuso orario proviene dalla configurazione del bridge.</p><a href="#settingsForm">Apri controlli ora e app</a></div>
           <div class="settings-tile"><span class="settings-tag available">Disponibile ora</span><h3>Audio e manopola</h3><p>Volume locale, feedback della ghiera e modalità Sonos. Disponibilità audio secondo l’adapter.</p><a href="#settingsForm">Apri controlli audio</a></div>
           <div class="settings-tile"><span class="settings-tag">Firmware stock</span><h3>Rete Wi‑Fi</h3><p>Il bridge non configura le credenziali Wi‑Fi del TC002. Usa la configurazione Ulanzi stock; il primo setup del futuro runtime locale è ancora da qualificare.</p><strong id="settingsWifiState">Stato rete non disponibile</strong><a href="https://docs.ulanzistudio.com/tc002/en/software/ulanzi-studio" target="_blank" rel="noopener noreferrer">Guida Ulanzi Wi‑Fi ↗</a></div>
-          <div class="settings-tile"><span class="settings-tag">Configurazione bridge</span><h3>MQTT e Home Assistant</h3><p>Broker, credenziali, TLS e discovery sono impostati nella configurazione del bridge o dell’add-on Home Assistant. Nessuna password viene mostrata qui.</p><strong id="settingsMqttState">Stato broker non disponibile</strong><a href="https://github.com/lucaamo/tc002-awtrix-bridge/blob/milestone/runtime-foundations/config.example.yaml" target="_blank" rel="noopener noreferrer">Esempio configurazione bridge ↗</a></div>
+          <div class="settings-tile"><span class="settings-tag">Configurazione bridge</span><h3>MQTT e Home Assistant</h3><p>Broker, credenziali, TLS e discovery sono impostati nella configurazione del bridge o dell’add-on Home Assistant. Nessuna password viene mostrata qui.</p><strong id="settingsMqttState">Stato broker non disponibile</strong><a href="https://github.com/lucaamo/tc002-awtrix-ha-addon/tree/main/addon" target="_blank" rel="noopener noreferrer">Esempio configurazione bridge ↗</a></div>
           <div class="settings-tile"><span class="settings-tag">In qualificazione</span><h3>Accesso, aggiornamenti e recupero</h3><p>Account locale, provisioning, aggiornamento e ripristino non sono controlli disponibili sul TC002 attuale. Non eseguire reset o flash da questa pagina.</p><strong id="settingsRuntimeState">Companion temporaneo</strong></div>
           <div class="settings-tile"><span class="settings-tag">Configurazione bridge</span><h3>Fuso orario e servizi</h3><p>Il fuso orario viene caricato all’avvio del bridge. NTP, dimmer notturno, mDNS e metriche sul TC002 richiedono il runtime locale e prove hardware.</p></div>
           <div class="settings-tile"><span class="settings-tag available">Disponibile ora</span><h3>Notifiche e integrazioni</h3><p>Notifiche, moodlight, indicatori, app personalizzate e Sonos sono gestiti dal bridge.</p><a href="#awtrixTools">Apri strumenti AWTRIX</a></div>
@@ -1218,6 +1220,7 @@
       appsDirty: false,
       titleEdits: {},
       studioApps: [],
+      studioTarget: { enabled: false, kind: "bridge", connected: true, syncedApps: [] },
       studioEditingName: null,
       studioAuthorized: false,
       studioAccessMessage: "Verifico l’accesso a Home Assistant…",
@@ -1473,6 +1476,12 @@
       "Disattivata": "Disabled",
       "Asciutto": "Dry",
       "Nel carosello": "In carousel",
+      "Su AWTRIX NG": "On AWTRIX NG",
+      "In sincronizzazione": "Syncing",
+      "AWTRIX NG connesso · {count} app sincronizzate": "AWTRIX NG connected · {count} apps synced",
+      "AWTRIX NG non raggiungibile: {error}": "AWTRIX NG unreachable: {error}",
+      "App sincronizzate con AWTRIX NG": "Apps synced with AWTRIX NG",
+      "Sincronizza AWTRIX NG": "Sync AWTRIX NG",
       "Nessuna pioggia prevista nelle prossime 12 ore": "No rain forecast in the next 12 hours",
       "Nuovo nome app (lettere, numeri, _ o -)": "New app name (letters, digits, _ or -)",
       "App rinominata": "App renamed",
@@ -2641,7 +2650,8 @@
         copy.append(title, detail);
         const badge = document.createElement("span");
         badge.className = `studio-badge${app.lastError ? " error" : ""}`;
-        badge.textContent = !app.enabled ? t("Disattivata") : app.visibilityReason === "dryForecast" ? t("Asciutto") : app.lastError ? t("Errore") : app.present ? t("Nel carosello") : t("Nascosta");
+        const exported = state.studioTarget.enabled && (state.studioTarget.syncedApps || []).includes(app.name);
+        badge.textContent = !app.enabled ? t("Disattivata") : app.visibilityReason === "dryForecast" ? t("Asciutto") : app.lastError ? t("Errore") : !app.present ? t("Nascosta") : state.studioTarget.enabled ? (exported ? t("Su AWTRIX NG") : t("In sincronizzazione")) : t("Nel carosello");
         badge.title = app.lastError || (app.visibilityReason === "dryForecast" ? t("Nessuna pioggia prevista nelle prossime 12 ore") : "");
         top.append(copy, badge);
 
@@ -2667,7 +2677,7 @@
         show.type = "button";
         show.textContent = t("Mostra");
         show.disabled = !app.present || !app.enabled;
-        show.addEventListener("click", () => switchApp(app.name));
+        show.addEventListener("click", () => showStudioApp(app.name));
         const remove = document.createElement("button");
         remove.className = "btn danger";
         remove.type = "button";
@@ -2700,6 +2710,18 @@
       try {
         const document = await request("api/v1/studio/apps");
         state.studioApps = document.apps || [];
+        state.studioTarget = document.target || { enabled: false, kind: "bridge", connected: true, syncedApps: [] };
+        const targetStatus = $("studioTargetStatus");
+        const targetActions = $("studioTargetActions");
+        targetStatus.hidden = !state.studioTarget.enabled;
+        targetActions.hidden = !state.studioTarget.enabled;
+        if (state.studioTarget.enabled) {
+          const count = (state.studioTarget.syncedApps || []).length;
+          targetStatus.classList.toggle("error", !state.studioTarget.connected);
+          targetStatus.textContent = state.studioTarget.connected
+            ? t("AWTRIX NG connesso · {count} app sincronizzate", {count})
+            : t("AWTRIX NG non raggiungibile: {error}", {error: state.studioTarget.lastError || "—"});
+        }
         if (document.timezone) {
           const timezoneChanged = state.studioTimezone !== document.timezone;
           state.studioTimezone = document.timezone;
@@ -2713,6 +2735,9 @@
         renderStudioList();
       } catch (error) {
         state.studioApps = [];
+        state.studioTarget = { enabled: false, kind: "bridge", connected: false, syncedApps: [] };
+        $("studioTargetStatus").hidden = true;
+        $("studioTargetActions").hidden = true;
         setStudioAccess(
           false,
           "Per sicurezza App Studio è disponibile solo da Home Assistant → TC002 AWTRIX Bridge → Apri interfaccia utente Web.",
@@ -2781,7 +2806,7 @@
         syncStudioPreviewMode();
         showToast(editing ? t("App aggiornata") : t("App creata e salvata"));
         await Promise.all([loadStudio(), refreshLive()]);
-        if (showAfterSave && result.present && result.enabled) await switchApp(result.name);
+        if (showAfterSave && result.present && result.enabled) await showStudioApp(result.name);
       } catch (error) {
         showToast(error.message, true);
       } finally {
@@ -3098,6 +3123,33 @@
       }
     }
 
+    async function showStudioApp(name) {
+      setBusy(true);
+      try {
+        await request(`api/v1/studio/apps/${encodeURIComponent(name)}/show`, { method: "POST" });
+        showToast(t("Mostro {name}", {name: friendlyName(name)}));
+        await Promise.all([loadStudio(), refreshLive()]);
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function syncStudioTarget() {
+      setBusy(true);
+      try {
+        await request("api/v1/studio/sync", { method: "POST" });
+        showToast(t("App sincronizzate con AWTRIX NG"));
+        await loadStudio();
+      } catch (error) {
+        showToast(error.message, true);
+        await loadStudio();
+      } finally {
+        setBusy(false);
+      }
+    }
+
     async function deletePushedApp(name) {
       const label = friendlyName(name);
       if (!window.confirm(t("Eliminare {name} dal bridge e cancellare il relativo comando MQTT mantenuto?", {name: label}))) return;
@@ -3296,6 +3348,7 @@
     $("studioCompactLayout").addEventListener("change", showStudioSourceFields);
     $("studioSearch").addEventListener("input", renderStudioList);
     $("studioExport").addEventListener("click", exportStudioApps);
+    $("studioSyncTarget").addEventListener("click", syncStudioTarget);
     $("studioImport").addEventListener("change", importStudioApps);
     $("studioPreviewExample").addEventListener("click", () => { state.studioPreviewMode = "example"; syncStudioPreviewMode(); scheduleStudioPreview(); });
     $("studioPreviewLive").addEventListener("click", () => { state.studioPreviewMode = "live"; syncStudioPreviewMode(); scheduleStudioPreview(); });

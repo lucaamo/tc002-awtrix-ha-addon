@@ -4,6 +4,8 @@ import asyncio
 import logging
 from typing import Any
 
+from aiohttp import ClientError
+
 from .adapter import (
     AwtrixNgHttpAdapter,
     AwtrixNgMqttAdapter,
@@ -16,6 +18,7 @@ from .engine import Engine
 from .errors import BridgeError
 from .http_service import HttpService
 from .mqtt_service import MqttService
+from .ng_studio import NgStudioPublisher
 from .sonos import SonosController
 from .studio import StudioManager
 
@@ -58,6 +61,17 @@ class BridgeService:
             self.adapter = MemoryAdapter()
         self.mqtt = MqttService(self.engine, config.mqtt, self.adapter)
         self.studio = StudioManager(self.engine)
+        self.studio_target: NgStudioPublisher | None = None
+        if config.adapter.enabled and config.adapter.mode in {
+            "awtrix_ng_http",
+            "awtrix_ng_mqtt",
+        }:
+            self.studio_target = NgStudioPublisher(
+                self.engine,
+                f"http://{config.adapter.device_host}:{config.adapter.http_port}",
+                studio=self.studio,
+                timeout=config.adapter.http_timeout,
+            )
         self.sonos = SonosController(
             self.engine,
             fetch_entity=self.studio.fetch_entity,
@@ -67,13 +81,15 @@ class BridgeService:
         self.http = HttpService(
             self.engine,
             config.http,
-            self.adapter,
-            self.studio,
-            self.mqtt.clear_retained_pushed_app,
-            self.sonos,
+            adapter=self.adapter,
+            studio=self.studio,
+            app_delete_hook=self.mqtt.clear_retained_pushed_app,
+            sonos=self.sonos,
+            studio_target=self.studio_target,
         )
         self._running = False
         self._render_task: asyncio.Task[None] | None = None
+        self._studio_target_task: asyncio.Task[None] | None = None
         self._last_notification_generation: int | None = None
         self._notification_audio_active = False
         self._button_pressed_ms: dict[str, int] = {}
@@ -83,10 +99,16 @@ class BridgeService:
         await self.adapter.start()
         await self.mqtt.start()
         await self.studio.start()
+        if self.studio_target is not None:
+            await self.studio_target.start()
         await self.sonos.start()
         await self.http.start()
         self._running = True
         self._render_task = asyncio.create_task(self._render_loop(), name="render-loop")
+        if self.studio_target is not None:
+            self._studio_target_task = asyncio.create_task(
+                self._studio_target_loop(), name="awtrix-ng-studio"
+            )
         LOGGER.info(
             "TC002 AWTRIX bridge listening on http://%s:%d",
             self.config.http.host,
@@ -99,6 +121,10 @@ class BridgeService:
             self._render_task.cancel()
             await asyncio.gather(self._render_task, return_exceptions=True)
             self._render_task = None
+        if self._studio_target_task is not None:
+            self._studio_target_task.cancel()
+            await asyncio.gather(self._studio_target_task, return_exceptions=True)
+            self._studio_target_task = None
         for task in self._sonos_tasks:
             task.cancel()
         if self._sonos_tasks:
@@ -106,6 +132,8 @@ class BridgeService:
             self._sonos_tasks.clear()
         await self.http.stop()
         await self.sonos.stop()
+        if self.studio_target is not None:
+            await self.studio_target.stop()
         await self.studio.stop()
         await self.adapter.stop()
         await self.mqtt.stop()
@@ -124,6 +152,7 @@ class BridgeService:
             started = asyncio.get_running_loop().time()
             now_ms = self.engine.monotonic_ms()
             self.engine.check_adapter_timeout(now_ms)
+            self._skip_exported_studio_page(now_ms)
             result = self.engine.render(now_ms)
             self.adapter.send_frame(result.frame, int(self.engine.display["brightness"]))
             self._sync_notification_audio()
@@ -132,6 +161,53 @@ class BridgeService:
                 next_device_publish = now_ms + 1000
             remaining = interval - (asyncio.get_running_loop().time() - started)
             await asyncio.sleep(max(0, remaining))
+
+    async def _studio_target_loop(self) -> None:
+        assert self.studio_target is not None
+        retry_seconds = 1.0
+        logged_error: str | None = None
+        next_reconcile = 0.0
+        while self._running:
+            try:
+                now = asyncio.get_running_loop().time()
+                if now >= next_reconcile:
+                    await self.studio_target.sync_once()
+                    next_reconcile = now + 1.0
+                active = await self.studio_target.refresh_active_once()
+                retry_seconds = 1.0
+                logged_error = None
+            except asyncio.CancelledError:
+                raise
+            except (BridgeError, ClientError, TimeoutError, TypeError, ValueError) as error:
+                message = str(error)
+                if message != logged_error:
+                    LOGGER.warning("AWTRIX NG Studio synchronization failed: %s", message)
+                    logged_error = message
+                retry_seconds = min(10.0, retry_seconds * 2)
+                active = False
+            if logged_error is not None:
+                await asyncio.sleep(retry_seconds)
+            else:
+                await asyncio.sleep(
+                    max(0.1, 1.0 / self.config.adapter.http_max_fps) if active else 0.5
+                )
+
+    def _skip_exported_studio_page(self, now_ms: int) -> None:
+        """Avoid duplicating separately exported Studio apps in the bridge page."""
+        if self.studio_target is None or self.engine.pages.current.origin != "studio":
+            return
+        visible = self.engine.pages.visible_names()
+        if not visible:
+            return
+        try:
+            index = visible.index(self.engine.pages.current_name)
+        except ValueError:
+            index = -1
+        for offset in range(1, len(visible) + 1):
+            candidate = visible[(index + offset) % len(visible)]
+            if self.engine.pages.pages[candidate].origin != "studio":
+                self.engine.switch_app(candidate, fast=True, now_ms=now_ms)
+                return
 
     def _sync_notification_audio(self) -> None:
         if self.config.adapter.mode != "udp":
