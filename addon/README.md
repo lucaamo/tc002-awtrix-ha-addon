@@ -35,6 +35,15 @@ The native companion remains
 required for the bridge's original physical knob, rocker and audio controls;
 NG or a Berry app must implement those controls when NG firmware is installed.
 
+### Radio compatibility relay
+
+The TC002 audio backend accepts direct MP3 radio streams. For Radio Italia,
+Radio Deejay and m2o, whose public live feeds are HLS/AAC, the add-on exposes
+on-demand MP3 streams at `/api/v1/radio-proxy/radio-italia`,
+`/api/v1/radio-proxy/radio-deejay` and `/api/v1/radio-proxy/m2o`. The relay
+starts only while a client is listening, accepts only this fixed station
+allowlist and terminates its transcoder when the listener disconnects.
+
 ## 0.2.38
 
 App Studio now asks when to move to the next app: after a number of seconds or

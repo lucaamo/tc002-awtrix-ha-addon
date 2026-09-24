@@ -2,6 +2,7 @@ ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
 WORKDIR /app
+RUN apk add --no-cache ffmpeg
 COPY pyproject.toml README.md ./
 COPY src ./src
 RUN pip3 install --no-cache-dir .

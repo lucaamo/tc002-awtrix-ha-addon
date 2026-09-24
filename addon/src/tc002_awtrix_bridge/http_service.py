@@ -24,6 +24,7 @@ from .lametric import (
     LametricIconUnavailable,
     fetch_lametric_icon,
 )
+from .radio_proxy import RadioProxy
 from .sonos import SonosController
 from .studio import StudioManager
 
@@ -109,6 +110,7 @@ class HttpService:
         app_delete_hook: Callable[[str], None] | None = None,
         sonos: SonosController | None = None,
         studio_target: StudioTarget | None = None,
+        radio_proxy: RadioProxy | None = None,
     ) -> None:
         self.engine = engine
         self.config = config
@@ -117,6 +119,7 @@ class HttpService:
         self.app_delete_hook = app_delete_hook
         self.sonos = sonos
         self.studio_target = studio_target
+        self.radio_proxy = radio_proxy or RadioProxy()
         self.app = web.Application(
             client_max_size=1_100_000,
             middlewares=[error_middleware, _auth_middleware(config), method_override_middleware],
@@ -133,6 +136,7 @@ class HttpService:
         await self.site.start()
 
     async def stop(self) -> None:
+        await self.radio_proxy.close()
         if self.runner is not None:
             await self.runner.cleanup()
             self.runner = None
@@ -166,6 +170,7 @@ class HttpService:
         router.add_put("/api/v1/indicators/{number}", self.indicator)
         router.add_delete("/api/v1/indicators/{number}", self.clear_indicator)
         router.add_get("/api/v1/audio", self.get_audio)
+        router.add_get("/api/v1/radio-proxy/{station}", self.radio_proxy.stream)
         router.add_post("/api/v1/audio/play", self.audio_play)
         router.add_post("/api/v1/audio/stop", self.audio_stop)
         router.add_get("/api/v1/audio/stations", self.unsupported_radio)
@@ -464,9 +469,7 @@ class HttpService:
         while part is not None and not part.filename:
             part = await reader.next()
         if part is None or not part.filename:
-            raise BridgeError(
-                "validationFailed", "Multipart upload requires a file", "file", 422
-            )
+            raise BridgeError("validationFailed", "Multipart upload requires a file", "file", 422)
         filename = Path(part.filename).name
         if not ASSET_NAME.fullmatch(filename):
             raise BridgeError(
@@ -641,12 +644,14 @@ class HttpService:
             attributes = item.get("attributes")
             if not isinstance(attributes, dict):
                 attributes = {}
-            entities.append({
-                "entityId": entity_id,
-                "name": str(attributes.get("friendly_name") or entity_id)[:100],
-                "state": str(item.get("state") or "")[:64],
-                "unit": str(attributes.get("unit_of_measurement") or "")[:24],
-            })
+            entities.append(
+                {
+                    "entityId": entity_id,
+                    "name": str(attributes.get("friendly_name") or entity_id)[:100],
+                    "state": str(item.get("state") or "")[:64],
+                    "unit": str(attributes.get("unit_of_measurement") or "")[:24],
+                }
+            )
         return web.json_response({"entities": entities})
 
     async def studio_live_preview(self, request: web.Request) -> web.Response:
@@ -696,13 +701,14 @@ class HttpService:
             isinstance(raw_icon_id, int)
             or (isinstance(raw_icon_id, str) and raw_icon_id.isascii() and raw_icon_id.isdigit())
         ):
-            raise BridgeError(
-                "validationFailed", "LaMetric icon ID must be numeric", "iconId", 422
-            )
+            raise BridgeError("validationFailed", "LaMetric icon ID must be numeric", "iconId", 422)
         icon_id = int(raw_icon_id)
         if not 1 <= icon_id <= 999_999_999:
             raise BridgeError(
-                "validationFailed", "LaMetric icon ID must be between 1 and 999999999", "iconId", 422
+                "validationFailed",
+                "LaMetric icon ID must be between 1 and 999999999",
+                "iconId",
+                422,
             )
         mode = body.get("mode", MODE_FAITHFUL_2X)
         if not isinstance(mode, str) or mode not in SUPPORTED_MODES:

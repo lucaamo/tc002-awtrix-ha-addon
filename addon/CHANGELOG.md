@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.47
+
+- Add an on-demand LAN radio relay for the three requested Italian stations
+  that publish only HLS/AAC, converting them to the MP3 stream supported by
+  the TC002 audio backend.
+
 ## 0.2.46
 
 Add an AWTRIX NG option that keeps App Studio synchronization active while
