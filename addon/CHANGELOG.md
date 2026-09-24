@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.44
+
+Complete the readable App Studio migration by removing obsolete hashed names
+from AWTRIX NG's saved carousel order as well as deleting their pushed content.
+This prevents empty legacy rows from remaining in the Apps page after upgrade.
+
 ## 0.2.43
 
 App Studio now publishes readable AWTRIX NG identifiers such as `Studio_CO2`,

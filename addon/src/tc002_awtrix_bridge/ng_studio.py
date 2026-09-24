@@ -167,6 +167,13 @@ class NgStudioPublisher:
     ) -> None:
         """Keep Studio apps mutually ordered without disturbing native app positions."""
         assert self._session is not None
+        has_obsolete_reserved = any(
+            isinstance(item, dict)
+            and isinstance(item.get("name"), str)
+            and _reserved_app_id(item["name"])
+            and item["name"] not in desired
+            for item in apps
+        )
         remote_items = [
             item
             for item in apps
@@ -180,7 +187,7 @@ class NgStudioPublisher:
         names = [item["name"] for item in remote_items]
         current = [name for name in names if name in desired]
         wanted = [name for name in desired if name in current]
-        if len(wanted) < 2 or current == wanted:
+        if not has_obsolete_reserved and (len(wanted) < 2 or current == wanted):
             return
         replacements = iter(wanted)
         order = [next(replacements) if name in desired else name for name in names]
