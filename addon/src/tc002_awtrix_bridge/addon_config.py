@@ -39,6 +39,7 @@ def write_config(options_path: Path, output_path: Path) -> None:
             "http_port": options.get("tc002_http_port", 80),
             "http_app": options.get("tc002_http_app", "awtrix_bridge"),
             "ng_mqtt_prefix": options.get("tc002_ng_mqtt_prefix", "awtrixNG"),
+            "ng_aggregate_enabled": options.get("tc002_ng_aggregate_enabled", True),
             "http_timeout": 3,
             "http_max_fps": options.get("tc002_http_max_fps", 10),
             "frame_port": 9876,

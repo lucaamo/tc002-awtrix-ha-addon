@@ -317,8 +317,27 @@ def awtrix_ng_payload(frame: bytes, brightness: int, lifetime_ms: int) -> dict[s
 class AwtrixNgHttpAdapter(StockHttpAdapter):
     """Publish bridge frames to AWTRIX NG without changing its native apps."""
 
+    def __init__(
+        self,
+        config: AdapterConfig,
+        *,
+        on_event: Callable[[str, dict[str, Any]], None],
+    ) -> None:
+        super().__init__(config, on_event=on_event)
+        self._aggregate_removed = False
+
     async def _post_frame(self, frame: bytes, brightness: int) -> None:
         assert self._session is not None
+        if not self.config.ng_aggregate_enabled:
+            if not self._aggregate_removed:
+                url = f"{self.base_url}/api/v1/apps/pushed/{self.config.http_app}"
+                async with self._session.delete(url) as response:
+                    if response.status not in {200, 404}:
+                        result = await response.text()
+                        raise ValueError(f"HTTP {response.status}: {result!r}")
+                self._aggregate_removed = True
+            self._report_heartbeat({"transport": "awtrix_ng_http", "error": None})
+            return
         lifetime_ms = max(1000, math.ceil(self.config.blackout_timeout * 1000))
         payload = awtrix_ng_payload(frame, brightness, lifetime_ms)
         url = f"{self.base_url}/api/v1/apps/pushed/{self.config.http_app}"
@@ -369,6 +388,7 @@ class AwtrixNgMqttAdapter:
         self.last_sent = 0.0
         self.last_heartbeat = 0.0
         self.switched = False
+        self.aggregate_removed = False
         self.sequence = 0
 
     async def start(self) -> None:
@@ -386,6 +406,7 @@ class AwtrixNgMqttAdapter:
     def set_online(self, online: bool) -> None:
         self.online = online
         self.switched = False
+        self.aggregate_removed = False
         self.last_frame = None
         if online:
             self.on_event("heartbeat", {"transport": "awtrix_ng_mqtt", "error": None})
@@ -397,6 +418,19 @@ class AwtrixNgMqttAdapter:
         if now - self.last_heartbeat >= 2.0:
             self.on_event("heartbeat", {"transport": "awtrix_ng_mqtt", "error": None})
             self.last_heartbeat = now
+        if not self.config.ng_aggregate_enabled:
+            if not self.aggregate_removed:
+                result = self.client.publish(
+                    f"{self.prefix}/cmd/apps/pushed/{self.config.http_app}",
+                    b"",
+                    qos=1,
+                    retain=False,
+                )
+                if result.rc != 0:
+                    LOGGER.warning("AWTRIX NG MQTT aggregate cleanup failed: %s", result.rc)
+                    return
+                self.aggregate_removed = True
+            return
         interval = 1 / self.config.http_max_fps
         refresh = max(1.0, self.config.blackout_timeout / 2)
         if now - self.last_sent < interval:

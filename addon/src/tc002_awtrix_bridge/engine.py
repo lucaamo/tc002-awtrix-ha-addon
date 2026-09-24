@@ -1003,6 +1003,7 @@ class Engine:
                 "deviceHost": self.config.adapter.device_host,
                 "adapterMode": self.config.adapter.mode,
                 "httpApp": self.config.adapter.http_app,
+                "ngAggregateEnabled": self.config.adapter.ng_aggregate_enabled,
                 "frameLifetimeSeconds": self.config.adapter.blackout_timeout,
                 "rendererMode": self.config.renderer.mode,
             },

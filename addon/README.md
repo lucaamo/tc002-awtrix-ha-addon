@@ -27,8 +27,11 @@ enter NG's MQTT topic prefix in `tc002_ng_mqtt_prefix`. Both devices must use
 the same broker. Each enabled App Studio page is also exported as a separate,
 volatile NG app through the device HTTP API, so NG owns carousel navigation and
 the Studio UI can show, synchronize and remove pages on the physical display.
-The aggregate bridge page remains available for notifications and legacy pages,
-but excludes Studio pages to avoid duplicates. The native companion remains
+Set `tc002_ng_aggregate_enabled` to `false` when all desired carousel pages are
+native NG, Berry or individually exported Studio apps. Studio synchronization
+continues, while the redundant `awtrix_bridge` app is removed. Keep it enabled
+only when notifications or legacy bridge pages still need that aggregate app.
+The native companion remains
 required for the bridge's original physical knob, rocker and audio controls;
 NG or a Berry app must implement those controls when NG firmware is installed.
 

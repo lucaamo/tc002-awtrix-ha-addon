@@ -1,11 +1,17 @@
 # Changelog
 
+## 0.2.46
+
+Add an AWTRIX NG option that keeps App Studio synchronization active while
+disabling and removing the legacy aggregate `awtrix_bridge` pushed app. This
+prevents a Studio page such as CO2 from appearing twice when NG already owns
+the carousel.
+
 ## 0.2.45
 
-Newly published App Studio pages are appended to the AWTRIX NG carousel on
-their first synchronization, while existing native and script app positions are
-preserved. This makes newly created Studio apps visible without a manual order
-edit in the device UI.
+Insert newly published Studio apps into the AWTRIX NG carousel order during the
+same synchronization pass. This covers both direct upgrades from hashed names
+and Studio apps created after migration, without moving existing native apps.
 
 ## 0.2.44
 
@@ -22,13 +28,20 @@ name collisions receive a short suffix. The first synchronization removes the
 legacy `tc002studio_<hash>` pushed apps after their readable replacements are
 published.
 
+Add the persistent 52×16 CasaViva Berry app and its migration guide. CasaViva
+runs in the AWTRIX NG carousel and consumes the existing compact MQTT state,
+so the old bridge-rendered page can be removed without moving credentials to
+the device script.
+
 ## 0.2.42
 
-AWTRIX NG Sonos Remote now includes the selected Home Assistant
-`media_player` with every command. The bridge validates that entity, routes
-playback and volume commands to it, and returns the selected player's metadata
-over a separate v2 MQTT topic. New installations start without a private
-player default; existing saved selections are preserved.
+AWTRIX NG Sonos Remote can send the selected Home Assistant `media_player`
+with every command. The bridge validates the entity, executes play/pause,
+track, volume and media-start services for that player, and returns its own
+artist, title, playback state, volume and friendly name over an isolated v2
+MQTT topic. Legacy plain commands remain accepted for compatibility.
+New installations start without a deployment-specific player entity; existing
+saved selections are preserved.
 
 ## 0.2.41
 

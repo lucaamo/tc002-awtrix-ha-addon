@@ -49,6 +49,7 @@ class AdapterConfig:
     http_port: int = 80
     http_app: str = "awtrix_bridge"
     ng_mqtt_prefix: str = "awtrixNG"
+    ng_aggregate_enabled: bool = True
     http_timeout: float = 3.0
     http_max_fps: int = 10
     heartbeat_timeout: float = 10.0
@@ -176,6 +177,7 @@ def load_config(path: str | Path) -> BridgeConfig:
         "mqtt.enabled": config.mqtt.enabled,
         "mqtt.tls": config.mqtt.tls,
         "adapter.enabled": config.adapter.enabled,
+        "adapter.ng_aggregate_enabled": config.adapter.ng_aggregate_enabled,
         "adapter.allow_reboot": config.adapter.allow_reboot,
         "adapter.allow_poweroff": config.adapter.allow_poweroff,
         "compatibility.strict": config.compatibility.strict,

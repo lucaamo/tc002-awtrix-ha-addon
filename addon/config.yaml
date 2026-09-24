@@ -1,5 +1,5 @@
 name: TC002 AWTRIX Bridge
-version: 0.2.45
+version: 0.2.46
 slug: tc002_awtrix_bridge
 description: AWTRIX NG MQTT/HTTP compatibility bridge for Ulanzi TC002 Pixbar
 url: https://github.com/lucaamo/tc002-awtrix-bridge
@@ -38,6 +38,7 @@ options:
   tc002_http_port: 80
   tc002_http_app: awtrix_bridge
   tc002_ng_mqtt_prefix: awtrixNG
+  tc002_ng_aggregate_enabled: true
   tc002_http_max_fps: 10
   tc002_http_frame_lifetime: 60
   mqtt_host: core-mosquitto
@@ -58,6 +59,7 @@ schema:
   tc002_http_port: port
   tc002_http_app: str
   tc002_ng_mqtt_prefix: str
+  tc002_ng_aggregate_enabled: bool
   tc002_http_max_fps: int(1,20)
   tc002_http_frame_lifetime: int(5,3600)
   mqtt_host: str
