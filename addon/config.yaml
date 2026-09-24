@@ -1,8 +1,8 @@
 name: TC002 AWTRIX Bridge
-version: 0.2.42
+version: 0.2.43
 slug: tc002_awtrix_bridge
 description: AWTRIX NG MQTT/HTTP compatibility bridge for Ulanzi TC002 Pixbar
-url: https://github.com/lucaamo/tc002-awtrix-ha-addon
+url: https://github.com/lucaamo/tc002-awtrix-bridge
 arch:
   - aarch64
   - amd64
@@ -31,8 +31,8 @@ ports_description:
   9877/udp: TC002 companion events
 options:
   uid: tc002
-  name: TC002 Pixbar
-  timezone: UTC
+  name: TC002 AWTRIX Bridge
+  timezone: Europe/Rome
   tc002_host: 192.168.1.50
   adapter_mode: stock_http
   tc002_http_port: 80

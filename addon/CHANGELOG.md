@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.43
+
+App Studio now publishes readable AWTRIX NG identifiers such as `Studio_CO2`,
+`Studio_Meteo` and `Studio_Compleanno`. Unicode titles are converted to valid
+device identifiers, long names respect the 32-character limit, and only true
+name collisions receive a short suffix. The first synchronization removes the
+legacy `tc002studio_<hash>` pushed apps after their readable replacements are
+published.
+
 ## 0.2.42
 
 AWTRIX NG Sonos Remote now includes the selected Home Assistant

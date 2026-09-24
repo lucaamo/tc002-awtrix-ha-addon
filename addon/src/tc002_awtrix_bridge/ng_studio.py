@@ -5,7 +5,9 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import re
 import time
+import unicodedata
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
@@ -18,14 +20,26 @@ from .errors import not_found, unavailable
 if TYPE_CHECKING:
     from .studio import StudioManager
 
-APP_PREFIX = "tc002studio_"
+APP_PREFIX = "Studio_"
+LEGACY_APP_PREFIX = "tc002studio_"
 APP_LIFETIME_MS = 15000
 REFRESH_SECONDS = 7.0
 
 
 def ng_studio_name(name: str) -> str:
-    """Reserve a deterministic NG app id without exposing a Studio title."""
-    return APP_PREFIX + hashlib.sha256(name.encode("utf-8")).hexdigest()[:12]
+    """Build a readable, deterministic AWTRIX id from the Studio title."""
+    ascii_name = (
+        unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode("ascii")
+    )
+    slug = re.sub(r"[^A-Za-z0-9_-]+", "_", ascii_name).strip("_-")
+    slug = re.sub(r"_+", "_", slug)
+    if not slug:
+        slug = "App_" + hashlib.sha256(name.encode("utf-8")).hexdigest()[:6]
+    return (APP_PREFIX + slug)[:32].rstrip("_-")
+
+
+def _reserved_app_id(name: str) -> bool:
+    return name.startswith((APP_PREFIX, LEGACY_APP_PREFIX))
 
 
 class NgStudioPublisher:
@@ -81,11 +95,16 @@ class NgStudioPublisher:
         self.last_error = str(error)[:240]
 
     def _desired(self) -> dict[str, str]:
-        return {
-            ng_studio_name(name): name
-            for name in self.engine.pages.visible_names()
-            if self.engine.pages.pages[name].origin == "studio"
-        }
+        desired: dict[str, str] = {}
+        for name in self.engine.pages.visible_names():
+            if self.engine.pages.pages[name].origin != "studio":
+                continue
+            app_id = ng_studio_name(name)
+            if app_id in desired and desired[app_id] != name:
+                suffix = "_" + hashlib.sha256(name.encode("utf-8")).hexdigest()[:6]
+                app_id = app_id[: 32 - len(suffix)].rstrip("_-") + suffix
+            desired[app_id] = name
+        return desired
 
     def _switch_on_change(self, name: str) -> bool:
         if self.studio is None:
@@ -155,7 +174,7 @@ class NgStudioPublisher:
             and isinstance(item.get("name"), str)
             and item.get("present") is True
             and not (
-                item["name"].startswith(APP_PREFIX) and item["name"] not in desired
+                _reserved_app_id(item["name"]) and item["name"] not in desired
             )
         ]
         names = [item["name"] for item in remote_items]
@@ -192,7 +211,7 @@ class NgStudioPublisher:
                     for item in apps
                     if isinstance(item, dict)
                     and isinstance(item.get("name"), str)
-                    and item["name"].startswith(APP_PREFIX)
+                    and _reserved_app_id(item["name"])
                     and item.get("present") is True
                     and item.get("origin") == "pushed"
                 }
@@ -254,7 +273,10 @@ class NgStudioPublisher:
         """Publish a Studio app immediately, then select it on AWTRIX NG."""
         if self._session is None:
             raise unavailable("AWTRIX NG Studio publisher is not started")
-        app_id = ng_studio_name(name)
+        app_id = next(
+            (app_id for app_id, local_name in self._desired().items() if local_name == name),
+            ng_studio_name(name),
+        )
         async with self._lock:
             try:
                 await self._publish(app_id, name, self.engine.monotonic_ms(), force=True)
