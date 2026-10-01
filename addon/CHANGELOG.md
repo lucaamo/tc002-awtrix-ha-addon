@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.49
+
+Sonos Remote now reads the protected Home Assistant album-art URL, crops and
+resizes the image to a 10×10 RGB matrix in memory, and publishes only those
+pixels to the TC002. The Berry app draws the cover in the lower-left music
+area and automatically keeps Music Meter as the fallback when artwork is
+missing or cannot be decoded. The Home Assistant token never leaves the add-on
+and changing tracks does not write artwork to the TC002 flash.
+
 ## 0.2.48
 
 Sonos Remote can now store up to twelve named playlists, favourites or media

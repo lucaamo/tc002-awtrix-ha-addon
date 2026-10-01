@@ -15,6 +15,7 @@ from .adapter import (
     UdpAdapter,
 )
 from .config import BridgeConfig
+from .cover import cover_payload
 from .engine import Engine
 from .errors import BridgeError
 from .http_service import HttpService
@@ -100,6 +101,8 @@ class BridgeService:
         self._notification_audio_active = False
         self._button_pressed_ms: dict[str, int] = {}
         self._sonos_tasks: set[asyncio.Task[None]] = set()
+        self._sonos_cover_url = ""
+        self._sonos_cover_value = ""
 
     def _sonos_mqtt_message(self, payload: bytes) -> None:
         task = asyncio.create_task(
@@ -129,7 +132,7 @@ class BridgeService:
                 if body is None:
                     raise ValueError("Unknown legacy Sonos command")
             state = await self.sonos.remote_command(body)
-            self._publish_sonos_remote_state(state)
+            await self._publish_sonos_remote_state(state)
         except (BridgeError, ValueError, json.JSONDecodeError) as error:
             LOGGER.warning("Ignored invalid Sonos MQTT command: %s", error)
             self.mqtt.publish_absolute(
@@ -141,7 +144,19 @@ class BridgeService:
                 f"{SONOS_REMOTE_ROOT}/state/error", str(error)[:240], retain=True
             )
 
-    def _publish_sonos_remote_state(self, state: dict[str, Any]) -> None:
+    async def _publish_sonos_remote_state(self, state: dict[str, Any]) -> None:
+        image_url = str(state.get("mediaImageUrl") or "")
+        if image_url != self._sonos_cover_url:
+            self._sonos_cover_url = image_url
+            self._sonos_cover_value = ""
+            if image_url:
+                try:
+                    image = await self.studio.fetch_media_image(image_url)
+                    self._sonos_cover_value = json.dumps(
+                        cover_payload(image), separators=(",", ":")
+                    )
+                except (BridgeError, ValueError):
+                    LOGGER.warning("Cannot prepare Sonos album artwork", exc_info=True)
         values = {
             "artist": str(state.get("artist") or ""),
             "title": str(state.get("title") or ""),
@@ -149,6 +164,7 @@ class BridgeService:
             "volume": str(int(state.get("volume") or 0)),
             "player_name": str(state.get("friendlyName") or "Sonos"),
             "error": str(state.get("lastError") or ""),
+            "cover": self._sonos_cover_value,
             "playlists": json.dumps(
                 self.sonos.playlists(), ensure_ascii=False, separators=(",", ":")
             ),

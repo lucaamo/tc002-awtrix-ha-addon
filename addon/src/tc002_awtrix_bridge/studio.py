@@ -523,6 +523,30 @@ class StudioManager:
     async def fetch_entity(self, entity_id: str) -> dict[str, Any]:
         return await self._fetch_entity(entity_id)
 
+    async def fetch_media_image(self, path: str, *, maximum_bytes: int = 2_000_000) -> bytes:
+        """Fetch a Home Assistant-protected media image without exposing its token."""
+        if self._session is None or not self._token:
+            raise unavailable("Home Assistant media access is unavailable")
+        if not isinstance(path, str) or not path.startswith("/api/"):
+            raise unavailable("Home Assistant media image URL is unavailable")
+        url = f"http://supervisor/core{path}"
+        headers = {"Authorization": f"Bearer {self._token}", "Accept": "image/*"}
+        try:
+            async with self._session.get(url, headers=headers) as response:
+                if response.status != 200:
+                    raise unavailable(
+                        f"Home Assistant media image returned HTTP {response.status}"
+                    )
+                declared = response.content_length
+                if declared is not None and declared > maximum_bytes:
+                    raise unavailable("Home Assistant media image is too large")
+                data = await response.read()
+        except (aiohttp.ClientError, TimeoutError) as error:
+            raise unavailable("Cannot reach the Home Assistant media image") from error
+        if len(data) > maximum_bytes:
+            raise unavailable("Home Assistant media image is too large")
+        return data
+
     async def call_service(self, domain: str, service: str, data: dict[str, Any]) -> Any:
         return await self._call_home_assistant_service(
             domain, service, data, return_response=False

@@ -153,6 +153,7 @@ class SonosController:
         self.friendly_name = "Sonos"
         self.artist = ""
         self.title = ""
+        self.media_image_url = ""
         self.volume = 0
         self._volume_pending_until_ms = 0
         self._volume_overlay_value = 0
@@ -254,6 +255,7 @@ class SonosController:
             "friendlyName": self.friendly_name,
             "artist": self.artist,
             "title": self.title,
+            "mediaImageUrl": self.media_image_url,
             "volume": self.volume,
             "lastError": self.last_error,
             "playlistCount": len(self.playlists()),
@@ -491,6 +493,8 @@ class SonosController:
             or attributes.get("source")
             or ""
         )
+        image_url = attributes.get("entity_picture") or attributes.get("media_image_url")
+        self.media_image_url = str(image_url) if isinstance(image_url, str) else ""
         level = attributes.get("volume_level")
         if isinstance(level, (int, float)) and not isinstance(level, bool):
             observed = max(0, min(100, round(float(level) * 100)))
