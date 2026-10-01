@@ -5,7 +5,7 @@ from typing import Any
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
-COVER_SIZE = 10
+COVER_SIZE = 16
 
 
 def cover_payload(data: bytes, *, size: int = COVER_SIZE) -> dict[str, Any]:

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.50
+
+Sonos Remote album artwork is now generated at the TC002 panel's native
+`16×16` height. Berry v2.6 places artist and title in the remaining 36 columns.
+
 ## 0.2.49
 
 Sonos Remote now reads the protected Home Assistant album-art URL, crops and
