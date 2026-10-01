@@ -225,6 +225,19 @@
     input:disabled, select:disabled, textarea:disabled { cursor: not-allowed; opacity: .48; }
     input[type="color"] { width: 44px; height: 34px; padding: 3px; border: 1px solid var(--border); border-radius: 9px; background: #0d141d; }
     .two-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+    .sonos-playlist-list { display: grid; gap: 10px; }
+    .sonos-playlist-row {
+      display: grid;
+      grid-template-columns: minmax(120px, .8fr) minmax(220px, 2fr) minmax(140px, .9fr) auto;
+      gap: 10px;
+      align-items: end;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-2);
+    }
+    .sonos-playlist-row .btn { min-height: 42px; }
+    .sonos-playlist-empty { margin: 0; padding: 14px; border: 1px dashed var(--border); border-radius: 14px; }
 
     .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 38px; }
     .switch { position: relative; flex: 0 0 auto; width: 43px; height: 24px; }
@@ -373,6 +386,7 @@
       .status-list { grid-template-columns: 1fr; }
       .two-fields { grid-template-columns: 1fr; }
       .three-fields { grid-template-columns: 1fr; }
+      .sonos-playlist-row { grid-template-columns: 1fr; }
       .birthday-row { grid-template-columns: 1fr 35px; }
       .birthday-row .field { grid-column: 1; }
       .birthday-row .mini { grid-column: 2; grid-row: 1; }
@@ -558,19 +572,18 @@
           </div>
         </div>
         <div class="field">
-          <label for="sonosPlaylistId">Playlist, preferito o URI da avviare</label>
-          <input id="sonosPlaylistId" type="text" maxlength="1024" placeholder="es. spotify:playlist:… oppure S:/MiaPlaylist">
-          <p class="subtle">Al primo clic di ogni sessione Sonos, questo contenuto viene caricato. Se lasci vuoto, il clic esegue play/pausa.</p>
+          <div class="field-row">
+            <div>
+              <div class="label">Playlist disponibili sul TC002</div>
+              <div class="subtle">Entrando in Sonos Remote, ruota la ghiera per scegliere e premila per avviare.</div>
+            </div>
+            <button class="btn" type="button" id="sonosAddPlaylist">Aggiungi playlist</button>
+          </div>
+          <div class="sonos-playlist-list" id="sonosPlaylists"></div>
         </div>
-        <div class="two-fields">
-          <div class="field">
-            <label for="sonosPlaylistType">Tipo contenuto</label>
-            <input id="sonosPlaylistType" type="text" maxlength="128" placeholder="playlist">
-          </div>
-          <div class="field">
-            <label for="sonosLongPress">Pressione lunga (ms)</label>
-            <input id="sonosLongPress" type="number" min="600" max="3000" step="100" inputmode="numeric">
-          </div>
+        <div class="field">
+          <label for="sonosLongPress">Pressione lunga (ms)</label>
+          <input id="sonosLongPress" type="number" min="600" max="3000" step="100" inputmode="numeric">
         </div>
         <div class="status-note" id="sonosNowPlaying">La modalità Sonos non è attiva.</div>
         <div class="form-actions">
@@ -1236,6 +1249,7 @@
       studioEntityCache: {},
       studioTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
       sonos: null,
+      sonosPlaylists: [],
       busy: false,
       toastTimer: null,
     };
@@ -1273,10 +1287,16 @@
       "Abilita modalità Sonos": "Enable Sonos mode",
       "Consente alla pressione lunga della ghiera di attivare il telecomando.": "Allows a long knob press to activate the remote.",
       "Scatto volume (%)": "Volume step (%)",
-      "Playlist, preferito o URI da avviare": "Playlist, favorite or URI to start",
-      "es. spotify:playlist:… oppure S:/MiaPlaylist": "e.g. spotify:playlist:… or S:/MyPlaylist",
-      "Al primo clic di ogni sessione Sonos, questo contenuto viene caricato. Se lasci vuoto, il clic esegue play/pausa.": "The first click in each Sonos session loads this content. If left empty, the click toggles play/pause.",
+      "Playlist disponibili sul TC002": "Playlists available on the TC002",
+      "Entrando in Sonos Remote, ruota la ghiera per scegliere e premila per avviare.": "When Sonos Remote opens, turn the knob to choose and press it to start.",
+      "Aggiungi playlist": "Add playlist",
+      "Nessuna playlist configurata. Sonos Remote aprirà direttamente i controlli del brano.": "No playlists configured. Sonos Remote will open the track controls directly.",
+      "Nome": "Name",
+      "Contenuto": "Content",
       "Tipo contenuto": "Content type",
+      "Rimuovi": "Remove",
+      "Playlist {number}": "Playlist {number}",
+      "Massimo 12 playlist": "Maximum 12 playlists",
       "Pressione lunga (ms)": "Long press (ms)",
       "La modalità Sonos non è attiva.": "Sonos mode is not active.",
       "Brano precedente": "Previous track",
@@ -2960,6 +2980,99 @@
       }
     }
 
+    function sonosPlaylistsFromSettings(settings) {
+      const configured = Array.isArray(settings.playlists)
+        ? settings.playlists.map(item => ({
+            name: String(item?.name || ""),
+            mediaContentId: String(item?.mediaContentId || ""),
+            mediaContentType: String(item?.mediaContentType || "playlist"),
+          }))
+        : [];
+      if (configured.length || !settings.playlistMediaContentId) return configured;
+      return [{
+        name: t("Playlist {number}", {number: 1}),
+        mediaContentId: String(settings.playlistMediaContentId),
+        mediaContentType: String(settings.playlistMediaContentType || "playlist"),
+      }];
+    }
+
+    function sonosPlaylistField(label, className, value, { maxLength, placeholder = "" } = {}) {
+      const field = document.createElement("div");
+      field.className = "field";
+      const caption = document.createElement("label");
+      caption.textContent = t(label);
+      const input = document.createElement("input");
+      input.className = className;
+      input.type = "text";
+      input.maxLength = maxLength;
+      input.placeholder = placeholder;
+      input.value = value;
+      field.append(caption, input);
+      return field;
+    }
+
+    function readSonosPlaylists() {
+      return [...$("sonosPlaylists").querySelectorAll(".sonos-playlist-row")].map(row => ({
+        name: row.querySelector(".sonos-playlist-name").value.trim(),
+        mediaContentId: row.querySelector(".sonos-playlist-id").value.trim(),
+        mediaContentType: row.querySelector(".sonos-playlist-type").value.trim() || "playlist",
+      }));
+    }
+
+    function renderSonosPlaylists(playlists) {
+      state.sonosPlaylists = playlists.map(item => ({...item}));
+      const list = $("sonosPlaylists");
+      list.replaceChildren();
+      if (!state.sonosPlaylists.length) {
+        const empty = document.createElement("p");
+        empty.className = "subtle sonos-playlist-empty";
+        empty.textContent = t("Nessuna playlist configurata. Sonos Remote aprirà direttamente i controlli del brano.");
+        list.append(empty);
+      }
+      state.sonosPlaylists.forEach((playlist, index) => {
+        const row = document.createElement("div");
+        row.className = "sonos-playlist-row";
+        row.append(
+          sonosPlaylistField("Nome", "sonos-playlist-name", playlist.name, {maxLength: 32}),
+          sonosPlaylistField("Contenuto", "sonos-playlist-id", playlist.mediaContentId, {
+            maxLength: 1024,
+            placeholder: "spotify:playlist:… / SQ:10",
+          }),
+          sonosPlaylistField("Tipo contenuto", "sonos-playlist-type", playlist.mediaContentType || "playlist", {
+            maxLength: 128,
+            placeholder: "playlist",
+          }),
+        );
+        const remove = document.createElement("button");
+        remove.className = "btn danger";
+        remove.type = "button";
+        remove.textContent = t("Rimuovi");
+        remove.addEventListener("click", () => {
+          const current = readSonosPlaylists();
+          current.splice(index, 1);
+          renderSonosPlaylists(current);
+        });
+        row.append(remove);
+        list.append(row);
+      });
+      $("sonosAddPlaylist").disabled = state.sonosPlaylists.length >= 12;
+    }
+
+    function addSonosPlaylist() {
+      const playlists = readSonosPlaylists();
+      if (playlists.length >= 12) {
+        showToast(t("Massimo 12 playlist"), true);
+        return;
+      }
+      playlists.push({
+        name: t("Playlist {number}", {number: playlists.length + 1}),
+        mediaContentId: "",
+        mediaContentType: "playlist",
+      });
+      renderSonosPlaylists(playlists);
+      $("sonosPlaylists").querySelector(".sonos-playlist-row:last-child .sonos-playlist-name")?.focus();
+    }
+
     function renderSonos(payload, { refreshPlayers = false } = {}) {
       state.sonos = payload;
       const settings = payload.settings || {};
@@ -2985,8 +3098,7 @@
         }
         select.value = selected;
         $("sonosEnabled").checked = settings.enabled !== false;
-        $("sonosPlaylistId").value = settings.playlistMediaContentId || "";
-        $("sonosPlaylistType").value = settings.playlistMediaContentType || "playlist";
+        renderSonosPlaylists(sonosPlaylistsFromSettings(settings));
         $("sonosVolumeStep").value = String(settings.volumeStep ?? 5);
         $("sonosLongPress").value = String(settings.longPressMs ?? 1200);
       }
@@ -3023,13 +3135,16 @@
       event.preventDefault();
       setBusy(true);
       try {
+        const playlists = readSonosPlaylists();
+        const firstPlaylist = playlists[0] || null;
         await request("api/v1/sonos/settings", {
           method: "PATCH",
           body: {
             enabled: $("sonosEnabled").checked,
             playerEntityId: $("sonosPlayer").value,
-            playlistMediaContentId: $("sonosPlaylistId").value.trim(),
-            playlistMediaContentType: $("sonosPlaylistType").value.trim() || "playlist",
+            playlistMediaContentId: firstPlaylist?.mediaContentId || "",
+            playlistMediaContentType: firstPlaylist?.mediaContentType || "playlist",
+            playlists,
             volumeStep: Number($("sonosVolumeStep").value),
             longPressMs: Number($("sonosLongPress").value),
           },
@@ -3317,6 +3432,7 @@
     });
     $("settingsForm").addEventListener("submit", saveConfiguration);
     $("sonosForm").addEventListener("submit", saveSonos);
+    $("sonosAddPlaylist").addEventListener("click", addSonosPlaylist);
     $("sonosToggle").addEventListener("click", () => sonosCommand("toggle"));
     $("sonosPlayPause").addEventListener("click", () => sonosCommand("actions/playPause"));
     $("sonosPrevious").addEventListener("click", () => sonosCommand("actions/previous"));

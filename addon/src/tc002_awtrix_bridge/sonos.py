@@ -16,12 +16,14 @@ ServiceCaller = Callable[[str, str, dict[str, Any]], Awaitable[Any]]
 EntityLister = Callable[[str], Awaitable[list[dict[str, Any]]]]
 VOLUME_OSD_MS = 2000
 VOLUME_SETTLE_MS = 3000
+MAX_PLAYLISTS = 12
 
 DEFAULT_SONOS_SETTINGS: dict[str, Any] = {
     "enabled": True,
     "playerEntityId": "",
     "playlistMediaContentId": "",
     "playlistMediaContentType": "playlist",
+    "playlists": [],
     "volumeStep": 5,
     "longPressMs": 1200,
 }
@@ -53,6 +55,61 @@ def validate_sonos_settings(value: Any) -> dict[str, Any]:
             if not isinstance(item, str) or len(item) > maximum:
                 raise validation(f"Must be text up to {maximum} characters", key)
             result[key] = item.strip()
+    if "playlists" in result:
+        playlists = result["playlists"]
+        if not isinstance(playlists, list):
+            raise validation("Must be a list", "playlists")
+        if len(playlists) > MAX_PLAYLISTS:
+            raise validation(f"Choose at most {MAX_PLAYLISTS} playlists", "playlists")
+        cleaned: list[dict[str, str]] = []
+        names: set[str] = set()
+        for index, playlist in enumerate(playlists):
+            field = f"playlists[{index}]"
+            if not isinstance(playlist, dict):
+                raise validation("Must be an object", field)
+            unknown_playlist_keys = set(playlist) - {
+                "name",
+                "mediaContentId",
+                "mediaContentType",
+            }
+            if unknown_playlist_keys:
+                key = min(unknown_playlist_keys)
+                raise validation(f"Unknown playlist setting: {key}", f"{field}.{key}")
+            name = playlist.get("name")
+            content_id = playlist.get("mediaContentId")
+            content_type = playlist.get("mediaContentType", "playlist")
+            if not isinstance(name, str) or not name.strip() or len(name.strip()) > 32:
+                raise validation("Use a name from 1 to 32 characters", f"{field}.name")
+            if (
+                not isinstance(content_id, str)
+                or not content_id.strip()
+                or len(content_id.strip()) > 1024
+            ):
+                raise validation(
+                    "Media content is required and must be at most 1024 characters",
+                    f"{field}.mediaContentId",
+                )
+            if (
+                not isinstance(content_type, str)
+                or not content_type.strip()
+                or len(content_type.strip()) > 128
+            ):
+                raise validation(
+                    "Media content type is required and must be at most 128 characters",
+                    f"{field}.mediaContentType",
+                )
+            normalized_name = name.strip().casefold()
+            if normalized_name in names:
+                raise validation("Playlist names must be unique", f"{field}.name")
+            names.add(normalized_name)
+            cleaned.append(
+                {
+                    "name": name.strip(),
+                    "mediaContentId": content_id.strip(),
+                    "mediaContentType": content_type.strip(),
+                }
+            )
+        result["playlists"] = cleaned
     for key, minimum, maximum in (
         ("volumeStep", 1, 25),
         ("longPressMs", 600, 3000),
@@ -136,8 +193,15 @@ class SonosController:
         candidate.update(validate_sonos_settings(patch))
         self.engine.store.save("sonos_settings", candidate)
         player_changed = candidate["playerEntityId"] != self.settings["playerEntityId"]
+        playlists_changed = (
+            candidate["playlists"] != self.settings["playlists"]
+            or candidate["playlistMediaContentId"]
+            != self.settings["playlistMediaContentId"]
+            or candidate["playlistMediaContentType"]
+            != self.settings["playlistMediaContentType"]
+        )
         self.settings = candidate
-        if player_changed:
+        if player_changed or playlists_changed:
             self.session_started = False
             self._volume_pending_until_ms = 0
             self._volume_overlay_until_ms = 0
@@ -192,7 +256,25 @@ class SonosController:
             "title": self.title,
             "volume": self.volume,
             "lastError": self.last_error,
+            "playlistCount": len(self.playlists()),
         }
+
+    def playlists(self) -> list[dict[str, str]]:
+        """Return picker entries, migrating the former single playlist in memory."""
+        configured = self.settings.get("playlists")
+        if isinstance(configured, list) and configured:
+            return copy.deepcopy(configured)
+        content_id = self.settings.get("playlistMediaContentId")
+        if isinstance(content_id, str) and content_id:
+            content_type = self.settings.get("playlistMediaContentType")
+            return [
+                {
+                    "name": "Playlist 1",
+                    "mediaContentId": content_id,
+                    "mediaContentType": content_type or "playlist",
+                }
+            ]
+        return []
 
     async def toggle_mode(self) -> bool:
         async with self._lock:
@@ -222,15 +304,16 @@ class SonosController:
         async with self._lock:
             self._require_active()
             player = self.settings["playerEntityId"]
-            playlist = self.settings["playlistMediaContentId"]
-            if not self.session_started and playlist:
+            playlists = self.playlists()
+            if not self.session_started and playlists:
+                playlist = playlists[0]
                 await self._call_service(
                     "media_player",
                     "play_media",
                     {
                         "entity_id": player,
-                        "media_content_id": playlist,
-                        "media_content_type": self.settings["playlistMediaContentType"],
+                        "media_content_id": playlist["mediaContentId"],
+                        "media_content_type": playlist["mediaContentType"],
                     },
                 )
                 self.session_started = True

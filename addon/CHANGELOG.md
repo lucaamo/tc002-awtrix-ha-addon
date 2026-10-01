@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.48
+
+Sonos Remote can now store up to twelve named playlists, favourites or media
+URIs. The Home Assistant panel migrates the former single item automatically
+and publishes the ordered list over retained MQTT state. The TC002 Berry app
+opens a short playlist picker on entry: rotate the knob to browse, press it to
+start the highlighted item, or wait to continue to the normal track controls.
+
+The existing global long-press shortcut, exclusive carousel mode, track
+navigation, play/pause and Sonos-only rocker volume remain unchanged.
+
 ## 0.2.47
 
 - Add an on-demand LAN radio relay for the three requested Italian stations

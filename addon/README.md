@@ -35,6 +35,14 @@ The native companion remains
 required for the bridge's original physical knob, rocker and audio controls;
 NG or a Berry app must implement those controls when NG firmware is installed.
 
+### Sonos Remote playlist picker
+
+Sonos Remote can publish up to twelve named playlists, Sonos favourites or
+media URIs to the TC002. When the remote opens, turn the knob to highlight an
+item and press it to start playback. If no item is selected before the picker
+times out, the normal now-playing controls open. Existing single-playlist
+settings are migrated automatically.
+
 ### Radio compatibility relay
 
 The TC002 audio backend accepts direct MP3 radio streams. For Radio Italia,

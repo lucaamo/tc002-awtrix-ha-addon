@@ -149,6 +149,9 @@ class BridgeService:
             "volume": str(int(state.get("volume") or 0)),
             "player_name": str(state.get("friendlyName") or "Sonos"),
             "error": str(state.get("lastError") or ""),
+            "playlists": json.dumps(
+                self.sonos.playlists(), ensure_ascii=False, separators=(",", ":")
+            ),
         }
         for name, value in values.items():
             self.mqtt.publish_absolute(
